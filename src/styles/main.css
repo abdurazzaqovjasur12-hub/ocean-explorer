@@ -1,0 +1,48 @@
+:root {
+  --abyss: #03101a;
+  --deep: #0a2c3f;
+  --foam: #d7f1f2;
+  --mist: #8fb3bc;
+  --jelly: #b7a2ff;
+  --glass: rgba(6, 26, 38, 0.55);
+  --hairline: rgba(215, 241, 242, 0.2);
+
+  /* Swap for self-hosted fonts (e.g. @fontsource) when the brand type is chosen. */
+  --font-display: 'Iowan Old Style', 'Palatino Linotype', Palatino, 'Book Antiqua', Georgia, serif;
+  --font-ui: 'Avenir Next', 'Segoe UI Variable', 'Segoe UI', system-ui, -apple-system, sans-serif;
+
+  --inset-top: env(safe-area-inset-top, 0px);
+  --inset-right: env(safe-area-inset-right, 0px);
+  --inset-bottom: env(safe-area-inset-bottom, 0px);
+  --inset-left: env(safe-area-inset-left, 0px);
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body { margin: 0; }
+html { overscroll-behavior: none; scrollbar-width: none; } /* the progress rail is the scrollbar */
+html::-webkit-scrollbar { display: none; }
+/* While the scene loads there is nothing to scroll through yet. */
+html.is-locked, html.is-locked body { overflow: hidden; }
+
+body {
+  background: var(--abyss);
+  color: var(--foam);
+  font-family: var(--font-ui);
+  overscroll-behavior: none; /* no pull-to-refresh or rubber-banding mid-dive */
+  touch-action: pan-y; /* native vertical scrolling drives the story; no pinch-zoom of the WebGL stage */
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-font-smoothing: antialiased;
+}
+
+button { font: inherit; color: inherit; cursor: pointer; }
+
+:focus-visible { outline: 2px solid var(--jelly); outline-offset: 3px; }
+
+.three-canvas { display: block; width: 100%; height: 100%; outline: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
