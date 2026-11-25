@@ -3,18 +3,34 @@ import { QUALITY_LEVELS } from '@/config/quality';
 import { disposeObject3D } from '@/utils/dispose';
 
 const MIN_PIXEL_SCALE = 0.6;
+const STEP_DOWN = 0.15;
+const STEP_UP = 0.1;
 const WARMUP_FRAMES = 60;
 const SAMPLE_FRAMES = 90;
+const GOOD_SAMPLES_TO_RAISE = 3; // ~4.5 s of comfortable frame rate before the resolution goes back up
+const BAD_SAMPLES_TO_DOWNGRADE = 2; // at the lowest resolution and still too slow: ask for a lower tier
+const IDLE_AFTER = 8000; // ms without any input before the idle frame rate kicks in
+const ACTIVITY_EVENTS = ['scroll', 'wheel', 'pointerdown', 'pointermove', 'keydown', 'touchstart'];
 
 /**
  * Owns the renderer, camera, scene and render loop. Framework-agnostic:
  * Vue components create one, add updaters, and call dispose() on unmount.
+ *
+ * Keeping the frame rate (measured over ~1.5 s samples, after a warm-up):
+ *  - too slow: the render resolution drops a step (adaptive pixel ratio, down to 60 %);
+ *  - comfortably fast for a while: it climbs back a step, so a heavy scene doesn't leave the rest blurry;
+ *  - still too slow at the lowest resolution: `onSustainedLowFps` asks the app for a lower quality tier.
+ * Saving energy: nothing renders while the tab is hidden or the WebGL context is lost, and after 8 s without
+ * any input the loop renders every other frame (the ambient animation keeps going, at 30 fps); any scroll,
+ * touch, pointer or key brings it straight back.
  */
 export class SceneManager {
-  constructor(container, { quality = 'medium', adaptive = true, onContextLost, onContextRestored, onPerformanceDrop } = {}) {
+  constructor(container, { quality = 'medium', adaptive = true, onContextLost, onContextRestored, onPerformanceDrop, onSustainedLowFps } = {}) {
     this.container = container;
     this.adaptive = adaptive;
-    this.callbacks = { onContextLost, onContextRestored, onPerformanceDrop };
+    this.callbacks = { onContextLost, onContextRestored, onPerformanceDrop, onSustainedLowFps };
+    this.lastActivity = performance.now();
+    this.frameParity = 0;
 
     this.updaters = new Set();
     this.resizers = new Set();
@@ -26,7 +42,7 @@ export class SceneManager {
     this.lastTime = 0;
     this.elapsed = 0;
 
-    this.pixelScale = 1; // lowered automatically if the GPU struggles
+    this.pixelScale = 1; // lowered automatically if the GPU struggles, raised again when it copes
     this.size = { width: 0, height: 0, pixelRatio: 0 };
     this._resetPerfSample();
 
@@ -47,6 +63,11 @@ export class SceneManager {
     this.canvas = this.renderer.domElement;
     this.canvas.classList.add('three-canvas');
     container.appendChild(this.canvas);
+    // A long press on a phone would otherwise open the "save image" menu over the scene.
+    this._onContextMenu = (e) => e.preventDefault();
+    this.canvas.addEventListener('contextmenu', this._onContextMenu);
+    this._onActivity = () => { this.lastActivity = performance.now(); };
+    ACTIVITY_EVENTS.forEach((type) => window.addEventListener(type, this._onActivity, { passive: true, capture: true }));
 
     this._tick = this._tick.bind(this);
     this._onResize = () => this.resize();
@@ -170,21 +191,33 @@ export class SceneManager {
   _tick(now) {
     if (!this.running) return;
     this.rafId = requestAnimationFrame(this._tick);
+    // Idle: render every other frame. Not measured: it would look like a slow GPU.
+    const idle = now - this.lastActivity > IDLE_AFTER;
+    if (idle && (this.frameParity++ & 1)) return;
     const dt = Math.min(Math.max((now - this.lastTime) / 1000, 0), 0.1);
     this.lastTime = now;
     this.elapsed += dt;
     for (const update of this.updaters) update(dt, this.elapsed);
     this._render();
-    this._trackPerformance(dt);
+    if (idle) this._resetPerfSample();
+    else this._trackPerformance(dt);
   }
 
   _resetPerfSample() {
     this.warmup = WARMUP_FRAMES;
     this.sampleFrames = 0;
     this.sampleTime = 0;
+    this.goodSamples = 0;
+    this.badSamples = 0;
   }
 
-  /** If average FPS stays well under target, lower the render resolution a step. */
+  _setPixelScale(scale) {
+    this.pixelScale = scale;
+    this.size.pixelRatio = 0; // force re-apply
+    this.resize();
+  }
+
+  /** Frame-rate aware resolution (both ways) and, as a last resort, a request for a lower tier. */
   _trackPerformance(dt) {
     if (!this.adaptive) return;
     if (this.warmup > 0) {
@@ -198,11 +231,25 @@ export class SceneManager {
     const fps = this.sampleFrames / this.sampleTime;
     this.sampleFrames = 0;
     this.sampleTime = 0;
-    if (fps < this.settings.targetFps * 0.85 && this.pixelScale > MIN_PIXEL_SCALE) {
-      this.pixelScale = Math.max(MIN_PIXEL_SCALE, this.pixelScale - 0.15);
-      this.size.pixelRatio = 0;
-      this.resize();
-      this.callbacks.onPerformanceDrop?.(this.pixelScale, fps);
+    const target = this.settings.targetFps;
+    if (fps < target * 0.85) {
+      this.goodSamples = 0;
+      if (this.pixelScale > MIN_PIXEL_SCALE + 1e-3) {
+        this._setPixelScale(Math.max(MIN_PIXEL_SCALE, this.pixelScale - STEP_DOWN));
+        this.callbacks.onPerformanceDrop?.(this.pixelScale, fps);
+      } else if (++this.badSamples >= BAD_SAMPLES_TO_DOWNGRADE) {
+        this.badSamples = 0;
+        this.callbacks.onSustainedLowFps?.(fps);
+      }
+    } else if (fps > Math.min(target * 1.15, 57)) {
+      this.badSamples = 0;
+      if (this.pixelScale < 1 && ++this.goodSamples >= GOOD_SAMPLES_TO_RAISE) {
+        this.goodSamples = 0;
+        this._setPixelScale(Math.min(1, this.pixelScale + STEP_UP));
+      }
+    } else {
+      this.goodSamples = 0;
+      this.badSamples = 0;
     }
   }
 
@@ -213,6 +260,8 @@ export class SceneManager {
     this.resizeObserver.disconnect();
     window.removeEventListener('resize', this._onResize);
     document.removeEventListener('visibilitychange', this._onVisibility);
+    this.canvas.removeEventListener('contextmenu', this._onContextMenu);
+    ACTIVITY_EVENTS.forEach((type) => window.removeEventListener(type, this._onActivity, { capture: true }));
     this.canvas.removeEventListener('webglcontextlost', this._onContextLost);
     this.canvas.removeEventListener('webglcontextrestored', this._onContextRestored);
     this.updaters.clear();

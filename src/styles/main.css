@@ -20,7 +20,7 @@
 *, *::before, *::after { box-sizing: border-box; }
 
 html, body { margin: 0; }
-html { overscroll-behavior: none; scrollbar-width: none; } /* the progress rail is the scrollbar */
+html { overscroll-behavior: none; scrollbar-width: none; overflow-x: clip; } /* the progress rail is the scrollbar; clip, not hidden: no extra scroll container */
 html::-webkit-scrollbar { display: none; }
 /* While the scene loads there is nothing to scroll through yet. */
 html.is-locked, html.is-locked body { overflow: hidden; }
@@ -33,6 +33,7 @@ body {
   touch-action: pan-y; /* native vertical scrolling drives the story; no pinch-zoom of the WebGL stage */
   user-select: none;
   -webkit-user-select: none;
+  -webkit-touch-callout: none; /* no "save / copy" sheet on a long press (iOS) */
   -webkit-tap-highlight-color: transparent;
   -webkit-font-smoothing: antialiased;
 }

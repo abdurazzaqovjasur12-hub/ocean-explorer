@@ -148,3 +148,64 @@ export function createBubbleStreams(count, material) {
     },
   };
 }
+
+/**
+ * The ascent: bubbles that travel up with the camera on the way back to the surface (released from the
+ * submersible as it climbs), so they keep rising past the lens however fast the camera itself goes.
+ * Positions are relative to the camera; they rise, sway, grow as the pressure drops and are recycled below.
+ * `intensity` 0..1 (from the story timeline) sets how many are out; their speed grows with it.
+ */
+export function createAscentBubbles(count, material) {
+  const rng = createRng(91);
+  const { geometry, positions, sizes, alphas } = bubbleGeometry(count);
+  const rel = new Float32Array(count * 3);
+  const speed = new Float32Array(count);
+  const phase = new Float32Array(count);
+  const size0 = new Float32Array(count);
+  const BOTTOM = -9;
+  const TOP = 7;
+  const points = new THREE.Points(geometry, material);
+  points.frustumCulled = false;
+  points.visible = false;
+  let limit = count;
+
+  function respawn(i, anywhere) {
+    // Mostly ahead of the lens and around it, never right on it.
+    const a = rng() * Math.PI * 2;
+    const r = 1.2 + Math.sqrt(rng()) * 7;
+    rel[i * 3] = Math.cos(a) * r;
+    rel[i * 3 + 1] = anywhere ? lerp(BOTTOM, TOP, rng()) : BOTTOM - rng() * 2;
+    rel[i * 3 + 2] = -Math.abs(Math.sin(a)) * r - 1.5;
+    speed[i] = 1.6 + rng() * 2.6;
+    phase[i] = rng() * Math.PI * 2;
+    size0[i] = 0.05 + Math.pow(rng(), 2.4) * 0.2;
+  }
+  for (let i = 0; i < count; i++) respawn(i, true);
+
+  return {
+    points,
+    setLimit(n) { limit = Math.min(count, Math.max(0, n)); },
+    update(dt, t, cam, intensity) {
+      points.visible = intensity > 0.01;
+      if (!points.visible) return;
+      const active = Math.floor(limit * Math.min(1, intensity));
+      geometry.setDrawRange(0, active);
+      const lift = 0.6 + 0.8 * intensity;
+      for (let i = 0; i < active; i++) {
+        const k = i * 3;
+        let y = rel[k + 1] + speed[i] * lift * dt;
+        if (y > TOP) { respawn(i, false); y = rel[k + 1]; }
+        rel[k + 1] = y;
+        positions[k] = cam.x + rel[k] + Math.sin(t * 1.4 + phase[i]) * 0.18;
+        positions[k + 1] = cam.y + y;
+        positions[k + 2] = cam.z + rel[k + 2] + Math.cos(t * 1.2 + phase[i]) * 0.18;
+        const risen = (y - BOTTOM) / (TOP - BOTTOM);
+        sizes[i] = size0[i] * (1 + 0.6 * risen);
+        alphas[i] = Math.max(0, Math.min(1, (TOP - y) / 2.5, (y - BOTTOM) / 2.5)) * 0.85 * Math.min(1, intensity * 1.5);
+      }
+      geometry.attributes.position.needsUpdate = true;
+      geometry.attributes.aSize.needsUpdate = true;
+      geometry.attributes.aAlpha.needsUpdate = true;
+    },
+  };
+}

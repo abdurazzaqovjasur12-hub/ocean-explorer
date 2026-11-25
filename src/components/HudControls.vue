@@ -196,4 +196,16 @@ onBeforeUnmount(clearHide);
 @media (max-width: 640px) {
   .hud__range { width: min(8.5rem, 38vw); }
 }
+/* Narrow phones: with sound on there are four buttons; keep them clear of the brand on the left. */
+@media (max-width: 440px) {
+  .hud { top: calc(var(--inset-top) + 0.85rem); right: calc(var(--inset-right) + 0.75rem); gap: 0.35rem; }
+  .hud__btn { min-width: 2.5rem; height: 2.5rem; }
+  .hud__btn--text { padding: 0 0.7rem; font-size: 0.76rem; }
+}
+/* The smallest phones (320 px wide): a little tighter still, so four buttons clear the brand. */
+@media (max-width: 360px) {
+  .hud { gap: 0.3rem; right: calc(var(--inset-right) + 0.6rem); }
+  .hud__btn { min-width: 2.3rem; height: 2.3rem; }
+  .hud__btn--text { padding: 0 0.55rem; font-size: 0.7rem; }
+}
 </style>

@@ -19,15 +19,45 @@ export function createCameraRig(camera, { enablePointer = true } = {}) {
   let last = null;
   const rig = { atmosphere, baseY: 0 };
 
+  // Mouse: the pointer's position steers the parallax. Touch: a sideways drag looks around a little (an
+  // up-and-down drag is the page scrolling, which the browser handles: `touch-action: pan-y`), and the view
+  // drifts back when the finger lifts. Decided per pointer, so touchscreen laptops keep the mouse parallax.
+  let drag = null;
+  const stir = (nx, ny) => {
+    if (last) atmosphere.energy = Math.min(1, atmosphere.energy + Math.hypot(nx - last.x, ny - last.y) * 6);
+    last = { x: nx, y: ny };
+  };
   const onMove = (e) => {
     const nx = (e.clientX / window.innerWidth) * 2 - 1;
     const ny = (e.clientY / window.innerHeight) * 2 - 1;
-    if (last) atmosphere.energy = Math.min(1, atmosphere.energy + Math.hypot(nx - last.x, ny - last.y) * 6);
-    last = { x: nx, y: ny };
-    pointer.x = nx;
-    pointer.y = ny;
+    if (e.pointerType === 'mouse') {
+      stir(nx, ny);
+      pointer.x = nx;
+      pointer.y = ny;
+    } else if (drag && e.pointerId === drag.id) {
+      stir(nx, ny);
+      pointer.x = Math.max(-1, Math.min(1, drag.x + (nx - drag.nx) * 1.6));
+    }
   };
-  if (enablePointer) window.addEventListener('pointermove', onMove, { passive: true });
+  const onDown = (e) => {
+    if (e.pointerType === 'mouse') return;
+    if (e.target.closest?.('button, a, input, [data-ui]')) return; // interface, not the scene
+    drag = { id: e.pointerId, nx: (e.clientX / window.innerWidth) * 2 - 1, x: pointer.x };
+    last = null;
+  };
+  const onUp = (e) => {
+    if (e.pointerType === 'mouse' || !drag || e.pointerId !== drag.id) return;
+    drag = null;
+    pointer.x = 0; // ease back to the framed view
+    pointer.y = 0;
+  };
+  const opts = { passive: true };
+  if (enablePointer) {
+    window.addEventListener('pointermove', onMove, opts);
+    window.addEventListener('pointerdown', onDown, opts);
+    window.addEventListener('pointerup', onUp, opts);
+    window.addEventListener('pointercancel', onUp, opts);
+  }
 
   return Object.assign(rig, {
     update(dt, t, depth, shot = NO_SHOT) {
@@ -92,6 +122,9 @@ export function createCameraRig(camera, { enablePointer = true } = {}) {
     },
     dispose() {
       window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerdown', onDown);
+      window.removeEventListener('pointerup', onUp);
+      window.removeEventListener('pointercancel', onUp);
     },
   });
 }

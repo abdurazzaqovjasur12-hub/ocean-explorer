@@ -5,7 +5,7 @@ import { sampleDepthColor, fogDensityAt, absorptionColor, sunlightAt } from './d
 import { createLights } from './lights';
 import { createEnvironment } from './environment';
 import { createMarineSnow } from './particles';
-import { createBubbles, createBubbleStreams } from './bubbles';
+import { createBubbles, createBubbleStreams, createAscentBubbles } from './bubbles';
 import { createBubbleMaterial } from './bubbleMaterial';
 import { createLightShafts } from './createLightShafts';
 import { createCameraRig } from './cameraRig';
@@ -22,6 +22,7 @@ import { smoothstep } from '@/utils/math';
 
 const pause = () => new Promise((resolve) => setTimeout(resolve, 0)); // lets the loading UI repaint
 const MAX_STREAMS = QUALITY_LEVELS.high.underwater.streams;
+const MAX_ASCENT = QUALITY_LEVELS.high.underwater.ascent;
 const MAX_PLANKTON = QUALITY_LEVELS.high.underwater.plankton;
 const BURST_GAP = 1.2; // seconds: scrubbing back and forth across the waterline doesn't fire a burst every frame
 const CUT_DISTANCE = 6; // scene units in one frame: more than any scrolled travel (dt is capped at 0.1 s)
@@ -77,7 +78,9 @@ export async function createOceanScene({ scene, camera, renderer, settings, stat
   const burst = createBubbles(Math.round(settings.particleCount * 0.12), bubbleFx.material);
   const streams = createBubbleStreams(MAX_STREAMS, bubbleFx.material);
   streams.setLimit(settings.underwater.streams);
-  scene.add(burst.points, streams.points);
+  const ascent = createAscentBubbles(MAX_ASCENT, bubbleFx.material);
+  ascent.setLimit(settings.underwater.ascent);
+  scene.add(burst.points, streams.points, ascent.points);
   await pause();
 
   report(0.93, 'Waking the deep');
@@ -95,7 +98,7 @@ export async function createOceanScene({ scene, camera, renderer, settings, stat
   for (const o of [glow.points, ...jellies.group.children, ...whale.glowing, ...vents.glowing, ...abyss.glowing]) o.layers.enable(GLOW_LAYER);
   await pause();
 
-  const rig = createCameraRig(camera, { enablePointer: !state.device.isTouch });
+  const rig = createCameraRig(camera);
   const water = new THREE.Color();
   const absorb = new THREE.Color();
   const snowTint = new THREE.Color();
@@ -181,6 +184,7 @@ export async function createOceanScene({ scene, camera, renderer, settings, stat
       }
       burst.update(dt, t);
       streams.update(dt, t, camera.position, under * state.fx.snow);
+      ascent.update(dt, t, camera.position, under * state.fx.ascent);
 
       const vh = renderer?.domElement?.height ?? 720;
       glow.update(t, meters, camera.position, vh, speed, under);
@@ -203,6 +207,7 @@ export async function createOceanScene({ scene, camera, renderer, settings, stat
       snow.setCount(next.particleCount);
       plankton.setCount(Math.round(next.particleCount * next.underwater.plankton));
       streams.setLimit(next.underwater.streams);
+      ascent.setLimit(next.underwater.ascent);
       shafts.setQuality(next);
       sky.setQuality(next);
       surface.setQuality(next);

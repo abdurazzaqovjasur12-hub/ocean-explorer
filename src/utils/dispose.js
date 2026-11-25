@@ -5,6 +5,12 @@ const TEXTURE_KEYS = [
 
 export function disposeMaterial(material) {
   for (const key of TEXTURE_KEYS) material[key]?.dispose?.();
+  // Shader materials keep their textures in uniforms (sprites, noise...): free those as well.
+  for (const uniform of Object.values(material.uniforms ?? {})) {
+    const v = uniform?.value;
+    if (v?.isTexture) v.dispose();
+    else if (Array.isArray(v)) v.forEach((x) => x?.isTexture && x.dispose());
+  }
   material.dispose();
 }
 

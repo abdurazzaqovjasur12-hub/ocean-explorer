@@ -24,9 +24,10 @@ const at = (id) => {
  *   vents     5.10 - 6.30   2950 -> 3050 m: looks down onto the vent field, then a slow orbit and push across it
  *   abyss     6.30 - 7.50   9800 -> 10,900 m (Challenger Deep): sparse, dark, a floodlight and a distant light; a vast
  *                           silhouette glides across (fx.abyss); slow creep forward and pan; narrower lens
- *   return    7.50 - 8.60   one long ascent to the surface, looking up at the light, back above the waves
+ *   return    7.50 - 9.10   the climb home with rising bubbles, a slow approach to the bright surface, breaking
+ *                           through, settling on the swell; the end screen with Replay / Explore again
  */
-export function createStoryTimeline({ state, intro, gauge, beats, blurTitles = true }) {
+export function createStoryTimeline({ state, intro, gauge, beats, end: endScreen, blurTitles = true }) {
   const tl = gsap.timeline({ paused: true, defaults: { ease: 'sine.inOut' } });
   const cam = state.cam;
 
@@ -102,15 +103,44 @@ export function createStoryTimeline({ state, intro, gauge, beats, blurTitles = t
     tl.to(cam, { pitch: 0, duration: 0.3 }, s + L - 0.35);
   }
 
-  // ---- 8. Return to surface: one long ascent, looking up at the light, then the drift above the waves. ----
+  // ---- 8. Return to surface ----
+  // A fast climb out of the deep with bubbles rising alongside; the sunlight comes back and the fog thins on
+  // their own as the depth drops (depthPalette.js). From 300 m it slows: the camera looks up at the bright
+  // window of the surface and rises towards it, gathering speed, breaks through (veil of light), bobs up and
+  // settles on the swell, and the end screen comes up over the open sea.
+  //
+  //   s - 0.12 .. s + 0.55   10,900 -> 300 m, looking up; bubbles (fx.ascent)
+  //   s + 0.55 .. s + 1.15   300 -> 0 m, slowly then faster, gazing at the light; breaks the surface ~s + 1.08
+  //   s + 1.05 .. s + 1.55   levels out with the horizon, bobs, idle drift returns, depth counter goes
+  //   s + 1.18 .. s + 1.58   end screen: "THE OCEAN IS STILL UNEXPLORED", letter by letter, then the buttons
   {
     const { s, L } = at('return');
     const end = s + L;
-    tl.to(state, { depth: 0, duration: L * 0.75 + LEAD, ease: 'power2.inOut' }, s - LEAD);
+    tl.to(state, { depth: 300, duration: 0.55 + LEAD, ease: 'power2.inOut' }, s - LEAD);
+    tl.to(state, { depth: 0, duration: 0.6, ease: 'power1.in' }, s + 0.55);
+    tl.to(state.fx, { ascent: 1, duration: 0.3, ease: 'power1.out' }, s - 0.05);
+    tl.to(state.fx, { ascent: 0, duration: 0.15, ease: 'power1.in' }, s + 0.95);
     tl.to(cam, { pitch: 0.3, duration: 0.4 }, s - 0.05);
-    tl.to(cam, { pitch: 0, duration: 0.35 }, s + 0.55);
-    tl.to(cam, { idle: 1, duration: 0.45, ease: 'power1.inOut' }, end - 0.5);
-    if (gauge) tl.to(gauge, { autoAlpha: 0, duration: 0.15 }, end - 0.35);
+    tl.to(cam, { pitch: 0.45, duration: 0.4 }, s + 0.55);
+    tl.to(cam, { pitch: 0, duration: 0.35 }, s + 1.05);
+    tl.to(cam, { heave: 0.5, duration: 0.17, ease: 'power2.out' }, s + 1.08);
+    tl.to(cam, { heave: 0, duration: 0.3, ease: 'sine.inOut' }, s + 1.25);
+    tl.to(cam, { idle: 1, duration: 0.45, ease: 'power1.inOut' }, s + 1.15);
+    if (gauge) tl.to(gauge, { autoAlpha: 0, duration: 0.12 }, s + 1.1);
+
+    if (endScreen) {
+      const at0 = s + 1.18;
+      const chars = endScreen.querySelectorAll('[data-end-char]');
+      const parts = endScreen.querySelectorAll('[data-end-part]');
+      const [kicker, ...rest] = parts;
+      tl.set(endScreen, { autoAlpha: 1 }, at0);
+      tl.fromTo(endScreen.querySelector('[data-end-scrim]'), { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.2, ease: 'power1.out', immediateRender: false }, at0);
+      tl.fromTo(kicker, { autoAlpha: 0, y: 12 }, { autoAlpha: 1, y: 0, duration: 0.1, ease: 'power2.out', immediateRender: false }, at0);
+      tl.fromTo(chars, { autoAlpha: 0, y: 22 }, { autoAlpha: 1, y: 0, duration: 0.08, stagger: 0.006, ease: 'power2.out', immediateRender: false }, at0 + 0.05);
+      tl.fromTo(endScreen.querySelector('[data-end-rule]'), { autoAlpha: 0, scaleX: 0 }, { autoAlpha: 1, scaleX: 1, duration: 0.12, ease: 'power2.inOut', immediateRender: false }, at0 + 0.2);
+      tl.fromTo(rest, { autoAlpha: 0, y: 16 }, { autoAlpha: 1, y: 0, duration: 0.12, stagger: 0.04, ease: 'power2.out', immediateRender: false }, at0 + 0.24);
+      if (at0 + 0.4 > end) throw new Error('end screen runs past the story'); // keep timeline time == screens scrolled
+    }
   }
 
   // ---- Cinematic text: each chapter's lines rise into place, hold, and lift away before the next. ----
@@ -121,18 +151,15 @@ export function createStoryTimeline({ state, intro, gauge, beats, blurTitles = t
     const L = c.length;
     const lines = el.querySelectorAll('[data-line]');
     const title = el.querySelector('[data-title]');
-    // (the final block lands before the end: the timeline must not run past STORY_LENGTH)
-    const inAt = c.final ? s + L * 0.68 : s + L * 0.22;
-    const inDur = c.final ? 0.15 : L * 0.16;
+    const inAt = s + L * (c.textAt ? c.textAt[0] : 0.22);
+    const inDur = c.textAt ? 0.18 : L * 0.16;
 
     tl.set(el, { autoAlpha: 1 }, inAt);
     tl.fromTo(lines, { autoAlpha: 0, y: 26 }, { autoAlpha: 1, y: 0, duration: inDur, stagger: inDur * 0.25, ease: 'power2.out', immediateRender: false }, inAt);
     if (title && blurTitles) {
       tl.fromTo(title, { filter: 'blur(10px)' }, { filter: 'blur(0px)', duration: inDur * 1.1, ease: 'power2.out', immediateRender: false }, inAt);
     }
-    if (c.final) return; // the last words stay
-
-    const outAt = s + L - 0.15;
+    const outAt = c.textAt ? s + L * c.textAt[1] : s + L - 0.15;
     tl.to(lines, { autoAlpha: 0, y: -18, duration: 0.1, stagger: 0.012, ease: 'power1.in' }, outAt);
     tl.set(el, { autoAlpha: 0 }, outAt + 0.13);
   });

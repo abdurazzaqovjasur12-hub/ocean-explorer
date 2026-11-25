@@ -35,6 +35,8 @@ function make(build) {
 // The scroll story fades the whole intro (`el`) away as the descent begins; its parts belong to playIn.
 defineExpose({
   playIn: () => make(buildIntroIn),
+  /** Back to the hidden starting state, ready to play in again (a replay of the whole experience). */
+  reset: () => ctx.add(() => hideIntroUi(root.value)),
   el: () => root.value,
 });
 </script>

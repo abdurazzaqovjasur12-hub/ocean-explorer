@@ -415,7 +415,11 @@ void main() {
   if (r > 1.0) discard;
   // Billowing: noise in the puff, drifting as it rises, warped by a second layer.
   vec2 q = vUv * 2.3 + vSeed.xy * 13.0 + vec2(0.0, -vLife * 1.6);
-  float warp = smokeFbm(q * 0.7 + 5.0);
+  #if SMOKE_WARP
+    float warp = smokeFbm(q * 0.7 + 5.0);
+  #else
+    float warp = 0.5;
+  #endif
   float n = smokeFbm(q + warp * 1.2);
   float shape = smoothstep(1.0, 0.2, r + (n - 0.5) * 0.9);
   float density = shape * smoothstep(0.0, 0.05, vLife) * (1.0 - smoothstep(0.45, 1.0, vLife)) * uOpacity;
@@ -452,7 +456,7 @@ function createSmoke(shared, count, octaves) {
     vertexShader: smokeVertex,
     fragmentShader: smokeFragment,
     uniforms: THREE.UniformsUtils.merge([THREE.UniformsLib.fog, { uOpacity: { value: 0.42 } }]),
-    defines: { SMOKE_OCTAVES: octaves },
+    defines: { SMOKE_OCTAVES: octaves, SMOKE_WARP: octaves >= 4 ? 1 : 0 },
     transparent: true,
     depthWrite: false,
     fog: true,
@@ -467,6 +471,7 @@ function createSmoke(shared, count, octaves) {
       g.instanceCount = Math.min(MAX.smoke, next.story.vents.smoke);
       if (material.defines.SMOKE_OCTAVES !== next.story.vents.octaves) {
         material.defines.SMOKE_OCTAVES = next.story.vents.octaves;
+        material.defines.SMOKE_WARP = next.story.vents.octaves >= 4 ? 1 : 0;
         material.needsUpdate = true;
       }
     },

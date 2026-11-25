@@ -9,7 +9,8 @@ const props = defineProps({
   ready: Boolean,
   error: { type: String, default: null },
 });
-const emit = defineEmits(['hidden']);
+// 'leaving': the fade-out starts (the scene can begin underneath it); 'hidden': it is gone.
+const emit = defineEmits(['leaving', 'hidden']);
 
 const root = ref(null);
 const display = reactive({ value: 0 }); // eased value shown to the user
@@ -19,6 +20,7 @@ let hiding = false;
 function maybeHide() {
   if (hiding || !props.ready || display.value < 0.999) return;
   hiding = true;
+  emit('leaving');
   gsap.to(root.value, {
     opacity: 0,
     duration: motionDuration(0.9),

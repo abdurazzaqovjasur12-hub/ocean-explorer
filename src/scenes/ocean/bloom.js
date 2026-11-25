@@ -43,9 +43,13 @@ export function createBloom(renderer, scene, camera, settings) {
     pass.setSize(w * 2, h * 2); // the pass works at half of what it is given: its first level matches the glow render
   }
 
+  // The glow is blurred in half-float targets; drawing into them needs one of these (missing on some older
+  // phones). Without it there is no bloom rather than a broken frame.
+  const canBloom = renderer.extensions.has('EXT_color_buffer_half_float') || renderer.extensions.has('EXT_color_buffer_float');
+
   function build() {
     dispose();
-    if (!cfg?.enabled) return;
+    if (!cfg?.enabled || !canBloom) return;
     glowTarget = new THREE.WebGLRenderTarget(2, 2, { type: THREE.HalfFloatType });
     pass = new UnrealBloomPass(new THREE.Vector2(2, 2), cfg.strength, cfg.radius, cfg.threshold);
     applySize();

@@ -10,7 +10,7 @@ npm run preview  # serve the build
 ```
 
 Scroll (wheel, trackpad, touch, keyboard) to dive; the chapter rail jumps between chapters.
-Force a graphics tier with `?quality=low|medium|high`. Open at a chapter with `#whale` (any chapter id).
+Force a graphics tier with `?quality=low|medium|high` (a forced tier is never changed automatically). Open at a chapter with `#whale` (any chapter id).
 
 ## Structure
 
@@ -45,10 +45,10 @@ Tuning knobs: `uWaveAmp`, `uChoppy`, `uFoam`, `uHaze` in `createOceanSurface.js`
 ## Scroll story
 
 Native page scrolling drives the whole expedition. The scene and interface are fixed; underneath them is an empty
-spacer 9.6 screens tall (`.track` in `App.vue`), and a GSAP ScrollTrigger scrubs one timeline across it.
+spacer 10.1 screens tall (`.track` in `App.vue`), and a GSAP ScrollTrigger scrubs one timeline across it.
 
 - **Chapters** (`src/config/story.js`): surface, descent, shallows (300 m), bioluminescence with jellyfish (1,000 m), whale (1,800 m),
-  hydrothermal vents (3,000 m), abyss (Challenger Deep, 10,900 m), return to the surface. Each has a length in screens (8.6 in total),
+  hydrothermal vents (3,000 m), abyss (Challenger Deep, 10,900 m), return to the surface. Each has a length in screens (9.1 in total),
   a depth range and its text. The timeline's time unit is one screen of scrolling.
 - **Timeline** (`src/core/story.js`): eased travel to each chapter's depth, a slow drift while its text shows, camera
   moves (`appState.cam`: idle drift, heave, fov, pitch, dolly), the whale's swim (`fx.whale`), the intro fading,
@@ -56,8 +56,8 @@ spacer 9.6 screens tall (`.track` in `App.vue`), and a GSAP ScrollTrigger scrubs
   the same path.
 - **Scrolling** (`src/composables/useStoryScroll.js`): `scrub: 1` (0.7 on touch) smooths every wheel notch and flick
   into a camera move. No snapping, pinning or preventDefault: the page scrolls like any page. Nearby chapters are
-  reached with a smooth scroll that any user scroll interrupts; far jumps and "Dive again" fade through black so the
-  dive is never rewound on screen. The hash follows the chapter. Mobile address-bar resizes are ignored.
+  reached with a smooth scroll that any user scroll interrupts; far jumps and the end screen's buttons fade through
+  black so the dive is never rewound on screen. The hash follows the chapter. Mobile address-bar resizes are ignored.
 - **Camera:** the scene adds `appState.cam` (scroll) and `appState.shot` (time-based arrival) before the camera rig
   uses them, so scrolling during the arrival never fights it. During the whale pass the camera turns to follow it.
 - **Surface crossings** are detected from the camera itself: going under fires the bubble burst, splash and veil of
@@ -124,6 +124,27 @@ procedural; there is no background image.
   | High | 96 | 50 | 120 | 300 | 4 | 300 | 1000 |
 
   Chimney mesh detail also scales with the tier.
+
+## Return to the surface and the end screen
+
+The last chapter (1.6 screens, `core/story.js`):
+
+- **The climb:** a fast climb out of the deep (10,900 to 300 m) with the camera looking up. Bubbles rise
+  alongside: `createAscentBubbles` in `bubbles.js` keeps them relative to the camera, so they overtake the lens
+  however fast it climbs (`fx.ascent`; 50 / 110 / 180 per tier, `underwater.ascent`). The marine snow streams
+  past. Sunlight, colour, light shafts and the thinning fog come back on their own as the depth drops.
+- **The approach:** from 300 m it slows down. The camera gazes up at the bright window of the surface and rises
+  towards it, gathering speed. It breaks through (the veil of light), bobs up, levels with the horizon and
+  settles on the swell, and the idle drift returns. The ascent text shows only during the climb.
+- **End screen** (`components/EndScreen.vue`, revealed by the same scrubbed timeline): "THE OCEAN IS STILL
+  UNEXPLORED" comes in letter by letter, then a short line and the buttons. Only the buttons take input, so
+  scrolling or swiping anywhere else still works; on phones they stack full width.
+  - **REPLAY EXPEDITION:** the whole experience again without reloading. Through a fade to black the page goes
+    back to the top (the timeline rewinds everything it drives), the camera returns to its raised arrival pose and
+    the intro to its hidden state. As the fade lifts, the arrival and the title sequence play again.
+  - **EXPLORE AGAIN:** back to the surface through the same fade, then straight down into the dive (as START
+    EXPEDITION does), without the intro.
+  - Both go through `useStoryScroll().restart({ atBlack, then })`; a second tap during the fade is ignored.
 
 ## The abyss
 
@@ -212,6 +233,41 @@ with a burst of bubbles and a veil of light, tilts up to watch the light and the
   (low 8 / 36 / 25 %, medium 16 / 80 / 35 %, high 26 / 150 / 45 %). Every tier stays at 8 draw calls underwater, plus the story scenery near its chapter (1 for the bioluminescence, 3 for the whale, 9 for the vent field, 5 for the abyss).
 
 In development, `__ocean` in the console exposes the scene, camera, renderer, state and layers.
+
+## Performance and devices
+
+Tested on desktop (1440 x 900), laptop (1280 x 720 at 1.25x), Android and iPhone portrait, phone landscape and a
+320 px phone, in development and in the production build.
+
+- **Starting tier** (`utils/device.js`): phones start on medium and computers on high. A known weak device starts one
+  lower: two cores, a reported memory of 2 GB or less, an older phone GPU, or integrated graphics on a computer
+  (detected from the GPU's name where the browser shares it). Unknown memory (Safari, Firefox) doesn't count as low,
+  so iPhones aren't stuck on the lowest tier.
+- **Frame-rate adaptation** (`SceneManager`): frame time is sampled every ~1.5 s. Too slow: the render resolution
+  drops a step (down to 60 %). Comfortable for ~4.5 s: it climbs back, so one heavy scene doesn't leave the rest
+  blurry. Still too slow at the lowest resolution: the app steps down a quality tier, unless the visitor chose one
+  in the HUD or the URL.
+- **Per tier:** pixel ratio, antialiasing, wave count and shader detail, particles, bubbles, light shafts, bloom
+  (off on low, a third resolution on medium), jellyfish and tentacles, vent smoke puffs and noise octaves (the
+  smoke's domain warp only on high), abyss motes and rays. See `config/quality.js`.
+- **Saving energy:** nothing renders in a hidden tab or with a lost WebGL context. After 8 s without input it
+  renders every other frame (the ambient motion continues at 30 fps); any scroll, touch, pointer or key brings it
+  back. Audio is suspended in the background.
+- **Memory:** every scene object, material, geometry and texture is disposed with the scene, including textures
+  held in shader uniforms. Replaying the expedition and switching quality don't grow GPU or JS memory (checked:
+  geometries, textures and heap stay flat).
+- **Touch:** vertical drags scroll the story; a sideways drag looks around a little and eases back on release
+  (mouse: the pointer's position). The jellyfish react to taps. Buttons have 44 px targets (about 37 px on 320 px
+  phones) and no double-tap zoom. A long press on the scene opens no menu, and the page never pans sideways.
+- **Layout:** safe-area insets everywhere, fluid type, compact HUD and wrapping chapter label on narrow phones,
+  chapter text kept clear of the depth gauge in landscape, and no horizontal overflow at any tested size.
+- **Rotation and resizing:** when the width changes, the scroll trigger is frozen while the layout settles, then the
+  page is put back at the same point of the story (the browser would otherwise keep the old pixel offset and jump
+  chapters). Height-only changes from mobile toolbars are ignored.
+- **Fullscreen:** the HUD button where the Fullscreen API exists (not on iPhone, where the button is hidden).
+- **Loading:** the arrival starts as the loading screen begins to fade, rather than after it has gone. Shaders for
+  every chapter are compiled during loading, so no chapter stutters the first time it appears.
+- **Bloom** needs half-float render targets; on GPUs that can't draw into them it is simply off.
 
 ## Sound
 

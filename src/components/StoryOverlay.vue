@@ -1,8 +1,6 @@
 <script setup>
 import { CHAPTERS } from '@/config/story';
 
-defineEmits(['restart']);
-
 // The text of every chapter after the surface (the intro screen is the surface's text). All of it is in
 // the DOM from the start; the story timeline reveals and hides each block as the scroll reaches it.
 const beats = CHAPTERS.filter((c) => c.title);
@@ -14,19 +12,12 @@ const beats = CHAPTERS.filter((c) => c.title);
       v-for="c in beats"
       :key="c.id"
       class="beat"
-      :class="{ 'beat--final': c.final }"
       :data-beat="c.id"
       :aria-label="c.label"
     >
       <p class="beat__kicker" data-line>{{ c.kicker }}</p>
       <h2 class="beat__title" data-line data-title>{{ c.title }}</h2>
       <p class="beat__text" data-line>{{ c.text }}</p>
-      <div v-if="c.final" class="beat__actions" data-line>
-        <button type="button" class="beat__again" data-ui @click="$emit('restart')">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M6 11l6-6 6 6" /></svg>
-          Dive again
-        </button>
-      </div>
     </article>
   </div>
 </template>
@@ -84,29 +75,6 @@ const beats = CHAPTERS.filter((c) => c.title);
   text-wrap: pretty;
 }
 
-.beat__actions { margin-top: 1.6rem; }
-.beat__again {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.6rem;
-  min-height: 2.9rem;
-  padding: 0 1.5rem;
-  border: 1px solid rgba(215, 241, 242, 0.5);
-  border-radius: 999px;
-  background: rgba(6, 26, 38, 0.4);
-  -webkit-backdrop-filter: blur(10px);
-  backdrop-filter: blur(10px);
-  font-size: 0.75rem;
-  letter-spacing: 0.26em;
-  text-transform: uppercase;
-  pointer-events: auto;
-  transition: border-color 0.3s, background-color 0.3s;
-}
-.beat__again svg { width: 1rem; height: 1rem; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
-.beat__again:active { background: rgba(10, 44, 63, 0.72); }
-@media (hover: hover) {
-  .beat__again:hover { border-color: var(--jelly); background: rgba(10, 44, 63, 0.55); }
-}
 
 /* Phones: a little higher, clear of the progress bar along the bottom edge. */
 @media (max-width: 640px) {
@@ -116,9 +84,8 @@ const beats = CHAPTERS.filter((c) => c.title);
 }
 /* Short landscape screens: keep the block compact. */
 @media (max-height: 520px) {
-  .beat { bottom: calc(var(--inset-bottom) + 3rem); }
+  .beat { bottom: calc(var(--inset-bottom) + 3rem); width: max(16rem, min(30rem, 100% - 21rem)); }
   .beat__title { font-size: clamp(1.5rem, 7vh, 2.2rem); }
   .beat__text { margin-top: 0.5rem; font-size: 0.85rem; line-height: 1.45; }
-  .beat__actions { margin-top: 0.9rem; }
 }
 </style>

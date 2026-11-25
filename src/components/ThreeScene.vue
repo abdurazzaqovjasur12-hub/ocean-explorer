@@ -10,7 +10,7 @@ const props = defineProps({
   /** Reactive state the scene reads each frame (depth, device, ...). */
   state: { type: Object, default: () => ({}) },
 });
-const emit = defineEmits(['progress', 'ready', 'error']);
+const emit = defineEmits(['progress', 'ready', 'error', 'low-fps']);
 
 const container = ref(null);
 let manager = null;
@@ -23,7 +23,10 @@ const report = (value, label) => emit('progress', Math.min(Math.max(value, 0), 1
 
 onMounted(async () => {
   try {
-    manager = new SceneManager(container.value, { quality: props.quality });
+    manager = new SceneManager(container.value, {
+      quality: props.quality,
+      onSustainedLowFps: (fps) => emit('low-fps', fps), // even the lowest resolution isn't enough
+    });
   } catch (err) {
     console.error('[ThreeScene] WebGL init failed', err);
     emit('error', 'Your browser couldn’t start WebGL. Update it or turn on hardware acceleration, then reload.');

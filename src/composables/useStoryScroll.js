@@ -23,6 +23,35 @@ export function useStoryScroll() {
   let scrollTween = null;
   let cut = null;
   let veilEl = null;
+  // Rotating a phone or resizing a window changes how tall the page is. The browser clamps the scroll offset
+  // in pixels and ScrollTrigger re-measures, so the story would jump to another chapter (often back to the
+  // surface). Keep our own record of where in the story the page was, freeze the trigger while the layout
+  // settles (so the camera doesn't fly off meanwhile), then put the page back at the same point.
+  let lastProgress = 0;
+  let resizing = false;
+  let resizeTimer = 0;
+  let lastWidth = window.innerWidth;
+  const progressNow = () => (st && st.end > st.start ? clamp((window.scrollY - st.start) / (st.end - st.start), 0, 1) : 0);
+  const onScroll = () => { if (!resizing) lastProgress = progressNow(); };
+  const onResize = () => {
+    if (!st || window.innerWidth === lastWidth) return; // height only: mobile toolbars, ignored by ScrollTrigger too
+    lastWidth = window.innerWidth;
+    if (!resizing) {
+      resizing = true;
+      st.disable(false); // keep the timeline exactly where it is
+    }
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+      const keep = lastProgress;
+      st.enable(false);
+      ScrollTrigger.refresh();
+      window.scrollTo(0, st.start + keep * (st.end - st.start));
+      ScrollTrigger.update();
+      st.getTween()?.progress(1);
+      resizing = false;
+      lastProgress = keep;
+    }, 250);
+  };
 
   const root = document.documentElement;
   root.classList.add('is-locked'); // no scrolling until the scene is ready
@@ -55,14 +84,23 @@ export function useStoryScroll() {
     sync();
   }
 
-  /** Fade to the deep, move, fade back in. */
-  function cutTo(y) {
-    if (!veilEl) return jump(y);
+  /**
+   * Fade to the deep, move, fade back in. `atBlack` runs while the screen is covered (reset things there);
+   * `then` runs as the veil starts to lift.
+   */
+  function cutTo(y, { atBlack, then, hold = 0.2 } = {}) {
+    if (!veilEl) {
+      jump(y);
+      atBlack?.();
+      then?.();
+      return;
+    }
     cut?.kill();
     cut = gsap.timeline({ onComplete: () => { cut = null; } })
       .to(veilEl, { autoAlpha: 1, duration: motionDuration(0.55), ease: 'power1.in' })
-      .add(() => jump(y))
-      .to(veilEl, { autoAlpha: 0, duration: motionDuration(1.2), ease: 'power1.out' }, `+=${motionDuration(0.2)}`);
+      .add(() => { jump(y); atBlack?.(); })
+      .to(veilEl, { autoAlpha: 0, duration: motionDuration(1.2), ease: 'power1.out' }, `+=${motionDuration(hold)}`)
+      .add(() => then?.(), `<+=${motionDuration(0.3)}`);
   }
 
   /**
@@ -89,12 +127,12 @@ export function useStoryScroll() {
   }
 
   /** Builds the timeline and the trigger. Call once the scene is ready and the DOM is in place. */
-  function init({ track, intro, gauge, beats, veil }) {
+  function init({ track, intro, gauge, beats, end, veil }) {
     veilEl = veil;
     if (veil) gsap.set(veil, { autoAlpha: 0 });
     if (gauge) gsap.set(gauge, { autoAlpha: 0 });
 
-    tl = createStoryTimeline({ state: appState, intro, gauge, beats, blurTitles: !appState.device.isMobile });
+    tl = createStoryTimeline({ state: appState, intro, gauge, beats, end, blurTitles: !appState.device.isMobile });
     tl.eventCallback('onUpdate', sync);
 
     root.classList.remove('is-locked');
@@ -107,6 +145,8 @@ export function useStoryScroll() {
       scrub: reduced ? 0.3 : appState.device.isTouch ? 0.7 : 1,
     });
     ScrollTrigger.refresh();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onResize);
 
     // Deep link or `?intro=0`: open at that chapter instead of the surface.
     const fromHash = chapterIndexById(decodeURIComponent(window.location.hash.slice(1)));
@@ -118,6 +158,9 @@ export function useStoryScroll() {
   }
 
   onBeforeUnmount(() => {
+    window.removeEventListener('scroll', onScroll);
+    window.removeEventListener('resize', onResize);
+    clearTimeout(resizeTimer);
     scrollTween?.kill();
     cut?.kill();
     st?.kill();
@@ -128,7 +171,14 @@ export function useStoryScroll() {
   return {
     init,
     goTo,
-    /** Back to the top through a fade, ready to dive again. */
-    restart: () => (st ? cutTo(0) : undefined),
+    /**
+     * Back to the very top through a fade, without reloading. `atBlack` resets whatever else should start
+     * over while the screen is dark; `then` runs as it lifts (e.g. replay the intro, or start the dive).
+     * Ignored while a cut is already under way (a double tap).
+     */
+    restart({ atBlack, then } = {}) {
+      if (!st || cut) return;
+      cutTo(0, { atBlack, then, hold: 0.45 });
+    },
   };
 }

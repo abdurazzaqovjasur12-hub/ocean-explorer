@@ -1,10 +1,11 @@
 /**
  * The scroll story. Scrolling moves one GSAP timeline (src/core/story.js) whose time is measured in
  * screens: a chapter with `length: 1` takes one viewport height of scrolling. The whole story is
- * 8.6 screens, so the page stays short and every chapter is a flick or two away on a phone.
+ * 9.1 screens, so the page stays short and every chapter is a flick or two away on a phone.
  *
  * `depth: [arrive, leave]` is the dive parameter (metres): the camera travels to `arrive` as the chapter
- * begins, then drifts slowly to `leave` while its text is on screen.
+ * begins, then drifts slowly to `leave` while its text is on screen. `textAt: [in, out]` (fractions of the
+ * chapter) overrides when its text shows.
  */
 export const CHAPTERS = [
   {
@@ -71,12 +72,12 @@ export const CHAPTERS = [
   {
     id: 'return',
     label: 'Return to surface',
-    length: 1.1,
+    length: 1.6,
     depth: [0, 0],
-    kicker: 'Expedition complete',
+    kicker: 'The ascent',
     title: 'Back into the light',
-    text: 'Eleven kilometres of water, climbed in a single breath.',
-    final: true,
+    text: 'Eleven kilometres of water above you, and every metre a little brighter than the last.',
+    textAt: [0.05, 0.42], // shown during the climb, gone before the surface comes into view (then the end screen)
   },
 ];
 

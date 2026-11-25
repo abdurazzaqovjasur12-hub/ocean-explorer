@@ -17,12 +17,14 @@ import HudControls from '@/components/HudControls.vue';
 import DepthIndicator from '@/components/DepthIndicator.vue';
 import StoryOverlay from '@/components/StoryOverlay.vue';
 import StoryProgress from '@/components/StoryProgress.vue';
+import EndScreen from '@/components/EndScreen.vue';
 
 const root = ref(null);
 const track = ref(null);
 const intro = ref(null);
 const gauge = ref(null);
 const overlay = ref(null);
+const endScreen = ref(null);
 const flash = ref(null);
 const veil = ref(null);
 const showLoader = ref(true);
@@ -50,6 +52,10 @@ function onReady() {
 function onError(message) {
   appState.loading.error = message;
 }
+// The story and the arrival start as the loading screen begins to fade, so they play in under it.
+function onLoaderLeaving() {
+  appState.loading.done = true;
+}
 function onLoaderHidden() {
   showLoader.value = false;
   appState.loading.done = true;
@@ -57,22 +63,55 @@ function onLoaderHidden() {
 function cycleQuality() {
   const next = (QUALITY_ORDER.indexOf(appState.quality) + 1) % QUALITY_ORDER.length;
   appState.quality = QUALITY_ORDER[next];
+  appState.qualityLocked = true; // the visitor's choice wins over the automatic adjustment
+}
+/** The frame rate stays too low even at the lowest render resolution: step down a quality tier. */
+function onLowFps(fps) {
+  if (appState.qualityLocked) return;
+  const i = QUALITY_ORDER.indexOf(appState.quality);
+  if (i <= 0) return;
+  appState.quality = QUALITY_ORDER[i - 1];
+  console.info(`[quality] ${Math.round(fps)} fps: switched to ${appState.quality}`);
 }
 
 /** Camera settles into the idle frame while the title, subtitle, button and details arrive. */
-function playIntroIn(startsAtSurface) {
+function playIntroIn(startsAtSurface, { hud = true } = {}) {
   gsapCtx.add(() => {
     arrival = createArrivalTimeline(appState);
     arrival.add(intro.value.playIn(), startsAtSurface ? 0.4 : 0);
     if (prefersReducedMotion() || !startsAtSurface) arrival.timeScale(2.5);
-    arrival.fromTo('[data-hud]', { opacity: 0 }, { opacity: 1, duration: 1.2, clearProps: 'opacity' }, startsAtSurface ? 2.8 : 0);
+    if (hud) arrival.fromTo('[data-hud]', { opacity: 0 }, { opacity: 1, duration: 1.2, clearProps: 'opacity' }, startsAtSurface ? 2.8 : 0);
   });
 }
 
 /** START EXPEDITION (and the scroll cue): glide down the page into the descent. Any scroll takes over. */
-function startExpedition() {
-  cue('start');
+function startExpedition({ silent = false } = {}) {
+  if (!silent) cue('start');
   story.goTo(chapterIndexById('descent'), { duration: 5.5, smooth: true });
+}
+
+/**
+ * REPLAY EXPEDITION: the whole experience from the start, without reloading. Through a fade to black the page
+ * returns to the top (the story timeline rewinds everything it drives), the camera goes back to its raised
+ * arrival pose and the intro to its hidden state; as the fade lifts, the arrival plays again.
+ */
+function replayExpedition() {
+  cue('start');
+  story.restart({
+    atBlack: () => {
+      arrival?.kill();
+      appState.shot.heave = 3;
+      appState.shot.fov = 8;
+      intro.value.reset();
+    },
+    then: () => playIntroIn(true, { hud: false }),
+  });
+}
+
+/** EXPLORE AGAIN: straight back to the surface and down into the water, skipping the intro. */
+function exploreAgain() {
+  cue('start');
+  story.restart({ then: () => startExpedition({ silent: true }) });
 }
 
 function collectBeats() {
@@ -94,6 +133,7 @@ watch(() => appState.loading.done, (done) => {
     intro: intro.value.el(),
     gauge: gauge.value.$el,
     beats: collectBeats(),
+    end: endScreen.value.$el,
     veil: veil.value,
   });
   playIntroIn(appState.story.chapter === 0);
@@ -124,6 +164,7 @@ onBeforeUnmount(() => {
       @progress="onProgress"
       @ready="onReady"
       @error="onError"
+      @low-fps="onLowFps"
     />
 
     <div class="vignette" aria-hidden="true"></div>
@@ -151,7 +192,8 @@ onBeforeUnmount(() => {
         @cycle-quality="cycleQuality"
       />
       <DepthIndicator ref="gauge" class="gauge" :depth="appState.meters" />
-      <StoryOverlay ref="overlay" @restart="story.restart" />
+      <StoryOverlay ref="overlay" />
+      <EndScreen ref="endScreen" @replay="replayExpedition" @explore="exploreAgain" />
       <StoryProgress data-hud :progress="appState.story.progress" :active="appState.story.chapter" @navigate="story.goTo" />
 
       <IntroScreen ref="intro" @start="startExpedition" />
@@ -168,6 +210,7 @@ onBeforeUnmount(() => {
       :label="appState.loading.label"
       :ready="appState.loading.ready"
       :error="appState.loading.error"
+      @leaving="onLoaderLeaving"
       @hidden="onLoaderHidden"
     />
   </main>
@@ -240,5 +283,15 @@ onBeforeUnmount(() => {
   .brand { left: calc(var(--inset-left) + 1.1rem); }
   .brand__name { font-size: 1.05rem; }
   .brand__chapter { font-size: 0.64rem; letter-spacing: 0.14em; }
+}
+/* Narrow phones: the chapter name wraps rather than running under the buttons on the right. */
+@media (max-width: 440px) {
+  .brand__name { font-size: 0.95rem; }
+  .brand__chapter { max-width: 9.5rem; line-height: 1.5; }
+}
+@media (max-width: 360px) {
+  .brand { left: calc(var(--inset-left) + 0.9rem); }
+  .brand__name { font-size: 0.86rem; }
+  .brand__chapter { max-width: 7.5rem; font-size: 0.58rem; }
 }
 </style>
