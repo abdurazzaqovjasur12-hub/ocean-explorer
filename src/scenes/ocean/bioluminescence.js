@@ -59,8 +59,8 @@ void main() {
 }
 `;
 
-/** How alive the water is at a depth: none in the sunlit water, brightest around 1,000 m, sparse in the deep. */
-export const glowAt = (m) => smoothstep(300, 800, m) * (1 - 0.6 * smoothstep(1200, 2200, m));
+/** How alive the water is at a depth: none in the sunlit water, brightest around 1,000 m, sparser deeper, rare in the abyss. */
+export const glowAt = (m) => smoothstep(300, 800, m) * (1 - 0.6 * smoothstep(1200, 2200, m)) * (1 - 0.7 * smoothstep(6000, 9500, m)); // sparse in the abyss
 
 /**
  * Bioluminescence: blue-green sparks, a few violet, and some larger soft orbs, flickering in the dark

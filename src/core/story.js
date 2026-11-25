@@ -20,10 +20,11 @@ const at = (id) => {
  *                           tilt up to watch the surface recede, level out; snow and gauge fade in
  *   shallows  1.70 - 2.60   220 -> 320 m among the light shafts
  *   glow      2.60 - 3.70   850 -> 1000 m among the jellyfish; slow push-in with a gentle pan
- *   whale     3.70 - 4.80   1700 -> 1850 m; the whale's swim across the frame is tied to the scroll (fx.whale)
- *   vents     4.80 - 5.70   2950 -> 3050 m, the camera tips down onto the vent field
- *   abyss     5.70 - 6.60   5200 -> 5600 m, narrower lens
- *   return    6.60 - 7.70   one long ascent to the surface, looking up at the light, back above the waves
+ *   whale     3.70 - 5.10   1700 -> 1850 m; the whale's pass is tied to the scroll (fx.whale), the camera follows it
+ *   vents     5.10 - 6.30   2950 -> 3050 m: looks down onto the vent field, then a slow orbit and push across it
+ *   abyss     6.30 - 7.50   9800 -> 10,900 m (Challenger Deep): sparse, dark, a floodlight and a distant light; a vast
+ *                           silhouette glides across (fx.abyss); slow creep forward and pan; narrower lens
+ *   return    7.50 - 8.60   one long ascent to the surface, looking up at the light, back above the waves
  */
 export function createStoryTimeline({ state, intro, gauge, beats, blurTitles = true }) {
   const tl = gsap.timeline({ paused: true, defaults: { ease: 'sine.inOut' } });
@@ -52,10 +53,14 @@ export function createStoryTimeline({ state, intro, gauge, beats, blurTitles = t
     tl.to(state, { depth: c.depth[1], duration: L * 0.68 - LEAD }, s + L * 0.32);
   }
 
-  // Whale: its swim from left to right is scrubbed by the scroll (the scene adds the tail beat and the glide).
+  // Whale: its journey (out of the fog, across in front of the camera, away into the fog) is scrubbed by the
+  // scroll; the scene adds the tail beat, the glide and the camera's turn to follow it. The lens lengthens a
+  // little as it comes close, and opens again as it leaves, ready for the drop to the vents.
   {
     const { s, L } = at('whale');
-    tl.to(state.fx, { whale: 1, duration: L - 0.18, ease: 'none' }, s + 0.1);
+    tl.to(state.fx, { whale: 1, duration: L - 0.15, ease: 'none' }, s + 0.05);
+    tl.to(cam, { fov: -5, duration: L * 0.4 }, s + 0.25);
+    tl.to(cam, { fov: 0, duration: L * 0.3 - 0.05 }, s + L * 0.7);
   }
   // Bioluminescence: a slow glide in among the jellyfish, panning gently to the right, then settling back
   // for the drop to the whale.
@@ -64,17 +69,37 @@ export function createStoryTimeline({ state, intro, gauge, beats, blurTitles = t
     tl.to(cam, { push: 2.6, yaw: -0.1, duration: L - 0.25 }, s + 0.05);
     tl.to(cam, { push: 0, yaw: 0, duration: 0.3 }, s + L - 0.15);
   }
-  // Vents: tip the camera down onto the vent field, then level out for the long drop to the abyss.
+  // Vents: the glow below draws the eye down while the camera is still descending from the whale; it slides
+  // sideways as it arrives, then glides across and in over the ridge, turning to keep the chimneys in frame
+  // (an orbit), and lifts its gaze a little. Everything is back to neutral just before the drop to the abyss
+  // passes the ridge (around s + L - 0.07), so the camera never ends up inside the rock.
   {
     const { s, L } = at('vents');
-    tl.to(cam, { pitch: -0.24, duration: 0.35 }, s);
-    tl.to(cam, { pitch: 0, duration: 0.3 }, s + L - 0.2);
+    tl.to(cam, { pitch: -0.27, duration: 0.4 }, s - 0.08);
+    tl.to(cam, { pitch: -0.15, duration: L - 0.65 }, s + 0.4);
+    tl.to(cam, { pitch: 0, duration: 0.3 }, s + L - 0.22);
+    tl.to(cam, { x: -4, yaw: -0.13, duration: 0.42, ease: 'power1.inOut' }, s - 0.12);
+    tl.to(cam, { x: 4, yaw: 0.13, duration: L - 0.55 }, s + 0.3);
+    tl.to(cam, { x: 0, yaw: 0, duration: 0.33 }, s + L - 0.25);
+    tl.to(cam, { push: 3, duration: L - 0.55, ease: 'power1.inOut' }, s + 0.1);
+    tl.to(cam, { push: 0, duration: 0.3 }, s + L - 0.45);
   }
-  // Abyss: a slightly longer lens, the world closing in.
+  // Abyss: a slightly longer lens, the world closing in. The snow thins out; the camera creeps forward and
+  // pans very slowly after the giant crossing in front of the distant light (fx.abyss); then everything eases
+  // back to neutral for the long climb home.
   {
     const { s, L } = at('abyss');
     tl.to(cam, { fov: -4, duration: 0.4 }, s);
     tl.to(cam, { fov: 0, duration: 0.3 }, s + L - 0.1);
+    tl.to(state.fx, { snow: 0.35, duration: 0.4, ease: 'power1.inOut' }, s - 0.1);
+    tl.to(state.fx, { snow: 1, duration: 0.3, ease: 'power1.inOut' }, s + L - 0.1);
+    tl.to(state.fx, { abyss: 1, duration: L - 0.05, ease: 'none' }, s);
+    tl.to(cam, { push: 3.5, duration: L - 0.4 }, s + 0.05);
+    tl.to(cam, { push: 0, duration: 0.25 }, s + L - 0.3);
+    tl.to(cam, { yaw: -0.12, duration: L - 0.4, ease: 'sine.inOut' }, s + 0.1);
+    tl.to(cam, { yaw: 0, duration: 0.3 }, s + L - 0.3);
+    tl.to(cam, { pitch: -0.06, duration: 0.4 }, s + 0.1);
+    tl.to(cam, { pitch: 0, duration: 0.3 }, s + L - 0.35);
   }
 
   // ---- 8. Return to surface: one long ascent, looking up at the light, then the drift above the waves. ----

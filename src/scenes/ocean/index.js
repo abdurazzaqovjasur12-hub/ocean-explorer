@@ -15,14 +15,16 @@ import { createOceanSurface } from './createOceanSurface';
 import { createBioluminescence } from './bioluminescence';
 import { createWhale } from './whale';
 import { createVents } from './vents';
+import { createAbyss } from './abyss';
 import { createJellyfish } from './jellyfish';
-import { createBloom } from './bloom';
+import { createBloom, GLOW_LAYER } from './bloom';
 import { smoothstep } from '@/utils/math';
 
 const pause = () => new Promise((resolve) => setTimeout(resolve, 0)); // lets the loading UI repaint
 const MAX_STREAMS = QUALITY_LEVELS.high.underwater.streams;
 const MAX_PLANKTON = QUALITY_LEVELS.high.underwater.plankton;
 const BURST_GAP = 1.2; // seconds: scrubbing back and forth across the waterline doesn't fire a burst every frame
+const CUT_DISTANCE = 6; // scene units in one frame: more than any scrolled travel (dt is capped at 0.1 s)
 
 /**
  * Scene factory used by <ThreeScene>. Receives { scene, camera, renderer, settings, state, report }
@@ -81,13 +83,16 @@ export async function createOceanScene({ scene, camera, renderer, settings, stat
   report(0.93, 'Waking the deep');
   const glow = createBioluminescence(settings.story.glow);
   scene.add(glow.points);
-  const whale = createWhale(scene);
+  const whale = createWhale(scene, camera, settings);
   const vents = createVents(scene, settings);
+  const abyss = createAbyss(scene, camera, settings);
   const jellies = createJellyfish(scene, camera, settings);
   const bloom = createBloom(renderer, scene, camera, settings);
   // Story scenery starts visible so the shader compile after loading includes it (update() hides what is
   // out of range on the first frame): no hitch the first time the dive reaches it.
-  for (const o of [glow.points, whale.mesh, vents.group, jellies.group]) o.visible = true;
+  for (const o of [glow.points, whale.mesh, vents.group, jellies.group, abyss.group]) o.visible = true;
+  // What glows: rendered once more, alone, into the bloom (see bloom.js).
+  for (const o of [glow.points, ...jellies.group.children, ...whale.glowing, ...vents.glowing, ...abyss.glowing]) o.layers.enable(GLOW_LAYER);
   await pause();
 
   const rig = createCameraRig(camera, { enablePointer: !state.device.isTouch });
@@ -96,14 +101,14 @@ export async function createOceanScene({ scene, camera, renderer, settings, stat
   const snowTint = new THREE.Color();
   const bubbleTint = new THREE.Color();
   let lastBurst = state.fx.burstId;
-  const shot = { idle: 0, heave: 0, fov: 0, pitch: 0, push: 0, yaw: 0 };
+  const shot = { idle: 0, heave: 0, fov: 0, pitch: 0, push: 0, yaw: 0, x: 0 };
   let wasUnder = false;
   let lastCross = -Infinity;
   let lastY = null;
   let speed = 0;
   let bloomAmount = 0;
   // Development only: `__ocean` in the console exposes the scene, camera and layers for inspection.
-  if (import.meta.env?.DEV && typeof window !== 'undefined') window.__ocean = { scene, camera, renderer, state, shafts, snow, plankton, streams, burst, atmosphere, glow, whale, vents, jellies, bloom };
+  if (import.meta.env?.DEV && typeof window !== 'undefined') window.__ocean = { scene, camera, renderer, state, shafts, snow, plankton, streams, burst, atmosphere, glow, whale, vents, jellies, abyss, bloom };
 
   return {
     update(dt, t) {
@@ -112,14 +117,18 @@ export async function createOceanScene({ scene, camera, renderer, settings, stat
       shot.idle = a.idle * b.idle;
       shot.heave = a.heave + b.heave;
       shot.fov = a.fov + b.fov;
-      shot.pitch = a.pitch + b.pitch;
+      shot.pitch = a.pitch + b.pitch + whale.followPitch;
       shot.push = a.push + b.push;
       shot.yaw = (b.yaw ?? 0) + whale.followYaw;
+      shot.x = b.x ?? 0;
       rig.update(dt, t, state.depth, shot);
       const meters = metersBelowSurface(rig.baseY);
       state.meters = meters;
+      // A jump of many units in one frame is a cut (a deep link, or a fade between far chapters), not travel:
+      // it must not count as speed, nor fire the surface-crossing effects below.
+      const cut = lastY !== null && Math.abs(rig.baseY - lastY) > CUT_DISTANCE;
       // How fast the camera travels (scene units / s), smoothed: fast travel stirs up the bioluminescence.
-      if (lastY !== null && dt > 0) speed += (Math.abs(rig.baseY - lastY) / dt - speed) * Math.min(1, dt * 4);
+      if (lastY !== null && dt > 0 && !cut) speed += (Math.abs(rig.baseY - lastY) / dt - speed) * Math.min(1, dt * 4);
       lastY = rig.baseY;
 
       sampleDepthColor(meters, water);
@@ -160,7 +169,7 @@ export async function createOceanScene({ scene, camera, renderer, settings, stat
       const isUnder = under > 0.5;
       if (isUnder !== wasUnder) {
         wasUnder = isUnder;
-        if (t - lastCross > BURST_GAP) {
+        if (!cut && t - lastCross > BURST_GAP) {
           if (isUnder) state.fx.burstId += 1;
           else state.fx.breachId += 1;
         }
@@ -175,8 +184,9 @@ export async function createOceanScene({ scene, camera, renderer, settings, stat
 
       const vh = renderer?.domElement?.height ?? 720;
       glow.update(t, meters, camera.position, vh, speed, under);
-      whale.update(dt, t, state.fx.whale, meters, camera.position);
-      vents.update(t, meters, vh);
+      whale.update(dt, t, state.fx.whale, meters, under, vh);
+      vents.update(dt, t, meters, vh);
+      abyss.update(dt, t, meters, under, state.fx.abyss, rig.baseY, vh);
       jellies.update(dt, t, meters, under);
       bloomAmount = smoothstep(250, 650, meters) * under;
     },
@@ -198,7 +208,9 @@ export async function createOceanScene({ scene, camera, renderer, settings, stat
       surface.setQuality(next);
       glow.setCount(next.story.glow);
       vents.setQuality(next);
+      abyss.setQuality(next);
       jellies.setQuality(next);
+      whale.setQuality(next);
       bloom.setQuality(next);
     },
     dispose() {

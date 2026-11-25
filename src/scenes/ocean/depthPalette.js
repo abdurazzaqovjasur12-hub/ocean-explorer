@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { lerp } from '@/utils/math';
+import { lerp, smoothstep } from '@/utils/math';
 
 // Water colour by metres below the surface: clear cyan-blue near the light, deepening to dark navy.
 const STOPS = [
@@ -11,7 +11,7 @@ const STOPS = [
   [1200, '#051f40'],
   [3000, '#03112a'],
   [6000, '#020a18'],
-  [11000, '#010409'],
+  [11000, '#010616'], // still blue, not black: the deepest water keeps a trace of colour
 ].map(([meters, hex]) => ({ meters, color: new THREE.Color(hex) }));
 
 /** Water colour at a depth in metres (used for the background, the fog and the surface seen from below). */
@@ -42,4 +42,5 @@ export function absorptionColor(meters, target = new THREE.Color()) {
 /** 1 at the surface, falling towards ~0 in the deep. */
 export const sunlightAt = (meters) => Math.max(0.04, Math.exp(-meters / 450));
 
-export const fogDensityAt = (meters) => lerp(0.022, 0.05, 1 - Math.exp(-meters / 1500));
+// Thickens further in the hadal deep: the abyss is mostly fog and darkness.
+export const fogDensityAt = (meters) => lerp(0.022, 0.05, 1 - Math.exp(-meters / 1500)) + 0.014 * smoothstep(5000, 10000, meters);

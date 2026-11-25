@@ -1,7 +1,7 @@
 /**
  * The scroll story. Scrolling moves one GSAP timeline (src/core/story.js) whose time is measured in
  * screens: a chapter with `length: 1` takes one viewport height of scrolling. The whole story is
- * 7.7 screens, so the page stays short and every chapter is a flick or two away on a phone.
+ * 8.6 screens, so the page stays short and every chapter is a flick or two away on a phone.
  *
  * `depth: [arrive, leave]` is the dive parameter (metres): the camera travels to `arrive` as the chapter
  * begins, then drifts slowly to `leave` while its text is on screen.
@@ -44,7 +44,7 @@ export const CHAPTERS = [
   {
     id: 'whale',
     label: 'Whale encounter',
-    length: 1.1,
+    length: 1.4,
     depth: [1700, 1850],
     kicker: 'Midnight zone · 1,800 m',
     title: 'A passing giant',
@@ -53,7 +53,7 @@ export const CHAPTERS = [
   {
     id: 'vents',
     label: 'Hydrothermal vents',
-    length: 0.9,
+    length: 1.2,
     depth: [2950, 3050],
     kicker: 'Mid-ocean ridge · 3,000 m',
     title: 'Black smokers',
@@ -62,11 +62,11 @@ export const CHAPTERS = [
   {
     id: 'abyss',
     label: 'The abyss',
-    length: 0.9,
-    depth: [5200, 5600],
-    kicker: 'Abyssal zone · 5,500 m',
+    length: 1.2,
+    depth: [9800, 10900],
+    kicker: 'Challenger Deep · 10,900 m',
     title: 'The abyss',
-    text: 'Near freezing, under 550 times the pressure of the air above. Most of the seafloor on Earth looks like this, and almost none of it has been seen.',
+    text: 'The deepest water on Earth, under more than a thousand times the pressure of the air above. Something vast moves at the edge of the light, and is gone.',
   },
   {
     id: 'return',
@@ -75,7 +75,7 @@ export const CHAPTERS = [
     depth: [0, 0],
     kicker: 'Expedition complete',
     title: 'Back into the light',
-    text: 'Five and a half kilometres of water, climbed in a single breath.',
+    text: 'Eleven kilometres of water, climbed in a single breath.',
     final: true,
   },
 ];

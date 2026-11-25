@@ -121,7 +121,9 @@ export class SceneManager {
 
     for (const fn of this.resizers) fn(width, height, pixelRatio);
 
-    if (!this.running) this._render(); // resizing clears the canvas
+    // Resizing clears the canvas. Draw again straight away, even mid-loop: an automatic quality drop happens
+    // after the frame was rendered, and would otherwise show one empty frame.
+    this._render();
   }
 
   setQuality(quality) {

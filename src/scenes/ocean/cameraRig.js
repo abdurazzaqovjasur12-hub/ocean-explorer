@@ -2,14 +2,14 @@ import { cameraYAtDepth, SURFACE_BLEND } from '@/config/zones';
 import { prefersReducedMotion } from '@/utils/motion';
 import { lerp, smoothstep } from '@/utils/math';
 
-const NO_SHOT = { idle: 0, heave: 0, fov: 0, pitch: 0, push: 0, yaw: 0 };
+const NO_SHOT = { idle: 0, heave: 0, fov: 0, pitch: 0, push: 0, yaw: 0, x: 0 };
 
 /**
  * Places the camera from the current depth: a low, cinematic view across the water at the surface
  * that becomes the underwater view as the dive begins. Adds gentle swell motion, slow underwater drift
  * and pointer parallax. After each update `baseY` is the camera's intended height without the hand-held
  * wobble: the depth counter reads it.
- * `shot` ({ idle, heave, fov, pitch, push, yaw }) is the direction from the GSAP timelines (scroll story plus arrival).
+ * `shot` ({ idle, heave, fov, pitch, push, yaw, x: sideways truck }) is the direction from the GSAP timelines (scroll story plus arrival).
  * `atmosphere` (smoothed pointer plus movement energy) is shared with the sky and water shaders.
  */
 export function createCameraRig(camera, { enablePointer = true } = {}) {
@@ -74,7 +74,7 @@ export function createCameraRig(camera, { enablePointer = true } = {}) {
       const bob = 0.08 * (1 - 0.6 * under); // the swell bob calms down underwater
 
       camera.position.set(
-        Math.sin(t * 0.2) * 0.35 * sway + driftX + dvX + parX,
+        Math.sin(t * 0.2) * 0.35 * sway + driftX + dvX + parX + (shot.x || 0),
         baseY + Math.sin(t * 0.5) * bob * sway + driftY + dvY + parY,
         driftZ - shot.push + dvZ,
       );

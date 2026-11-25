@@ -3,6 +3,7 @@ import { MAX_DEPTH, depthToY } from '@/config/zones';
 import { createRng } from '@/utils/random';
 
 const LANDMARK_COUNT = 36;
+const LANDMARK_DEPTH = 8000; // none in the abyss: there the dark should be empty but for what the story puts in it
 
 /** Seabed and placeholder landmarks (the water surface lives in createOceanSurface). Replace the landmarks with real content later. */
 export function createEnvironment(scene, settings) {
@@ -36,7 +37,7 @@ export function createEnvironment(scene, settings) {
     // hanging in front of the lens (placeholders until real landmarks exist).
     rock.position.set(
       side * (16 + rng() * 18),
-      depthToY(((i + rng()) / LANDMARK_COUNT) * MAX_DEPTH),
+      depthToY(((i + rng()) / LANDMARK_COUNT) * LANDMARK_DEPTH),
       -(30 + rng() * 34),
     );
     rock.scale.setScalar(1.5 + rng() * 3);
