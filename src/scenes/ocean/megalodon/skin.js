@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { HINGE } from './geometry';
-import { createNoiseTexture } from '../reef/noiseTexture';
+import { getNoiseTexture } from '../reef/noiseTexture';
 
 /** Uniforms shared by both levels of detail (one material). */
 export const skinUniforms = () => ({
@@ -16,7 +16,7 @@ export const skinUniforms = () => ({
   uGlowPass: { value: 0 }, // 1 while drawn into the bloom: black, so it hides the glow behind it
   // Baked noise (the reef's 256 x 256 tiling texture): a few reads instead of dozens of hashes per pixel,
   // which matters when the shark fills the screen.
-  uNoise: { value: createNoiseTexture() },
+  uNoise: { value: getNoiseTexture() }, // shared with the reef
 });
 
 /*

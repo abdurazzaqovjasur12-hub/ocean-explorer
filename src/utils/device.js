@@ -55,6 +55,25 @@ export function forcedQuality() {
   return forced && Object.hasOwn(QUALITY_LEVELS, forced) ? forced : null;
 }
 
+// The visitor's quality choice ('auto', 'low', 'medium', 'high'), remembered between visits.
+const QUALITY_KEY = 'ocean-explorer.quality';
+export const QUALITY_MODES = ['auto', 'low', 'medium', 'high'];
+export function storedQualityMode() {
+  try {
+    const v = localStorage.getItem(QUALITY_KEY);
+    return QUALITY_MODES.includes(v) ? v : null;
+  } catch {
+    return null;
+  }
+}
+export function saveQualityMode(mode) {
+  try {
+    localStorage.setItem(QUALITY_KEY, mode);
+  } catch {
+    /* not remembered, still applied */
+  }
+}
+
 /** Pick a starting quality tier: phones start on medium, computers on high, one lower for a known weak device. */
 export function pickQuality(device) {
   const forced = forcedQuality();

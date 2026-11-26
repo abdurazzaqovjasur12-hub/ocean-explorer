@@ -1,5 +1,5 @@
 import { reactive } from 'vue';
-import { detectDevice, forcedQuality, pickQuality } from '@/utils/device';
+import { detectDevice, forcedQuality, pickQuality, storedQualityMode } from '@/utils/device';
 import { storedMode } from '@/utils/mode';
 import { prefersReducedMotion, storedCalmMotion } from '@/utils/motion';
 
@@ -8,13 +8,17 @@ const device = detectDevice();
 // A chapter in the hash (`#whale`) opens the story at that chapter.
 const skipIntro = new URLSearchParams(window.location.search).get('intro') === '0';
 const mode = storedMode() ?? 'day';
+// Graphics quality: 'auto' (the default: the tier is picked for the device and stepped down if the frame rate
+// stays low) or a tier the visitor chose (kept as chosen). A tier forced in the URL (?quality=) wins over both.
+const qualityMode = forcedQuality() ?? storedQualityMode() ?? 'auto';
 
 /** Single shared, reactive source of truth for UI and scene. */
 export const appState = reactive({
   device,
-  quality: pickQuality(device),
+  qualityMode,
+  quality: qualityMode === 'auto' ? pickQuality(device) : qualityMode,
   // Set once the visitor picks a tier themselves (or forces one in the URL): from then on it is never changed automatically.
-  qualityLocked: !!forcedQuality(),
+  qualityLocked: qualityMode !== 'auto',
   // Day or night (remembered). env.night is the same thing as a number the scene reads, eased by GSAP (0..1).
   mode,
   env: { night: mode === 'night' ? 1 : 0 },

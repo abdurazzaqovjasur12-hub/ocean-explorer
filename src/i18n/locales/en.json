@@ -55,7 +55,9 @@
       "low": "Low",
       "medium": "Medium",
       "high": "High",
-      "aria": "Graphics quality: {tier}. Press to change"
+      "aria": "Graphics quality: {tier}. Press to change",
+      "auto": "Auto",
+      "autoAria": "Graphics quality: automatic (now {tier}). Press to change"
     },
     "fullscreen": {
       "enter": "Enter fullscreen",

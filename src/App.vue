@@ -3,6 +3,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import gsap from '@/core/gsap';
 import { appState } from '@/state/appState';
 import { QUALITY_ORDER } from '@/config/quality';
+import { QUALITY_MODES, pickQuality, saveQualityMode } from '@/utils/device';
 import { CHAPTERS, STORY_LENGTH, chapterIndexById } from '@/config/story';
 import { t } from '@/i18n';
 import { prefersReducedMotion, saveCalmMotion } from '@/utils/motion';
@@ -72,9 +73,12 @@ function onLoaderHidden() {
   appState.loading.done = true;
 }
 function cycleQuality() {
-  const next = (QUALITY_ORDER.indexOf(appState.quality) + 1) % QUALITY_ORDER.length;
-  appState.quality = QUALITY_ORDER[next];
-  appState.qualityLocked = true; // the visitor's choice wins over the automatic adjustment
+  // Auto -> Low -> Medium -> High -> Auto. A chosen tier wins over the automatic adjustment; Auto hands it back.
+  const mode = QUALITY_MODES[(QUALITY_MODES.indexOf(appState.qualityMode) + 1) % QUALITY_MODES.length];
+  appState.qualityMode = mode;
+  appState.qualityLocked = mode !== 'auto';
+  appState.quality = mode === 'auto' ? pickQuality(appState.device) : mode;
+  saveQualityMode(mode);
 }
 /** The frame rate stays too low even at the lowest render resolution: step down a quality tier. */
 function onLowFps(fps) {
@@ -250,6 +254,7 @@ onBeforeUnmount(() => {
         :music-volume="appState.audio.music"
         :effects-volume="appState.audio.effects"
         :quality="appState.quality"
+        :quality-mode="appState.qualityMode"
         :mode="appState.mode"
         @toggle-fullscreen="toggleFullscreen"
         @toggle-sound="toggleSound"

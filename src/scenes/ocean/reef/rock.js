@@ -4,7 +4,7 @@ import { createRng } from '@/utils/random';
 import { fbm } from '@/utils/noise';
 import { REEF_X, reefPoint, reefNormal, reefRows, sAtMeters, inView } from './shape';
 import { reefMeters } from './glsl';
-import { createNoiseTexture, NOISE_CELLS } from './noiseTexture';
+import { getNoiseTexture, NOISE_CELLS } from './noiseTexture';
 import { reefLightGlsl } from './lighting';
 
 /** The rock face as one indexed grid: columns across the view (x), rows down the cross-section. */
@@ -138,7 +138,7 @@ export function reefRockMaterial({ time, glow, fade, light }) {
       uReefGlow: glow,
       uReefFade: fade,
       uGlowPass: { value: 0 },
-      uNoise: { value: createNoiseTexture() },
+      uNoise: { value: getNoiseTexture() },
     },
     fog: true,
   });

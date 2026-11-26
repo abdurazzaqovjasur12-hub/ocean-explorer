@@ -10,7 +10,18 @@ npm run preview  # serve the build
 ```
 
 Scroll (wheel, trackpad, touch, keyboard) to dive; the chapter rail jumps between chapters.
-Force a graphics tier with `?quality=low|medium|high` (a forced tier is never changed automatically). Open at a chapter with `#whale` (any chapter id).
+Force a graphics tier with `?quality=low|medium|high` (a forced tier is never changed automatically).
+The quality button cycles **Auto → Low → Medium → High** (remembered in `ocean-explorer.quality`). Auto, the default,
+picks the tier from the device (phones medium, or low for a known weak GPU; laptops with integrated graphics
+medium; others high) and steps down a tier if the frame rate stays too low even at the lowest render resolution.
+A tier chosen by hand is kept as chosen.
+
+**Loading on phones.** The noise texture is built once and shared (reef rock, megalodon skin), from the lattice
+corners' hashes rather than a sine per pixel; value noise on the CPU remembers lattice corners it has already
+hashed (identical results, about half the work while building the reef). The megalodon is not built while loading:
+the first time night mode is on, it is built in idle time and its shaders are compiled in the background (both the
+normal and the glow pass). On a phone-speed CPU (4x throttling) the longest freeze while loading went from 2.5 s
+to under 1 s, and the total main-thread blocking from 5.4 s to about 2.7 s. Open at a chapter with `#whale` (any chapter id).
 
 ## Structure
 

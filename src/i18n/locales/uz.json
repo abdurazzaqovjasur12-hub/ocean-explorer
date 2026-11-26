@@ -55,7 +55,9 @@
       "low": "Past",
       "medium": "O‘rta",
       "high": "Yuqori",
-      "aria": "Grafika sifati: {tier}. O‘zgartirish uchun bosing"
+      "aria": "Grafika sifati: {tier}. O‘zgartirish uchun bosing",
+      "auto": "Avto",
+      "autoAria": "Grafika sifati: avtomatik (hozir {tier}). O‘zgartirish uchun bosing"
     },
     "fullscreen": {
       "enter": "To‘liq ekran rejimi",

@@ -12,6 +12,7 @@ const props = defineProps({
   musicVolume: { type: Number, default: 0.8 }, // background music, 0..1
   effectsVolume: { type: Number, default: 0.8 }, // sound effects and ambience, 0..1
   quality: { type: String, default: 'medium' }, // tier id; its name comes from the translations
+  qualityMode: { type: String, default: 'auto' }, // 'auto' or the tier the visitor chose
   mode: { type: String, default: 'day' }, // 'day' | 'night'
 });
 const emit = defineEmits(['toggle-fullscreen', 'toggle-sound', 'cycle-quality', 'set-volume', 'set-music', 'set-effects', 'toggle-mode']);
@@ -67,7 +68,10 @@ const mixRows = computed(() => [
   { id: 'music', label: t('hud.audio.music'), value: pct(props.musicVolume), event: 'set-music' },
   { id: 'effects', label: t('hud.audio.effects'), value: pct(props.effectsVolume), event: 'set-effects' },
 ]);
-const qualityLabel = computed(() => t(`hud.quality.${props.quality}`));
+const tierLabel = computed(() => t(`hud.quality.${props.quality}`));
+// Auto shows as "Auto"; its tooltip and label for screen readers say which tier it is using now.
+const qualityLabel = computed(() => (props.qualityMode === 'auto' ? t('hud.quality.auto') : tierLabel.value));
+const qualityAria = computed(() => (props.qualityMode === 'auto' ? t('hud.quality.autoAria', { tier: tierLabel.value }) : t('hud.quality.aria', { tier: tierLabel.value })));
 const modeLabel = computed(() => (props.mode === 'night' ? t('hud.mode.toDay') : t('hud.mode.toNight')));
 // The browser's own error text (often in another language) goes to the console, not into the label.
 const soundLabel = computed(() => {
@@ -82,7 +86,8 @@ onBeforeUnmount(clearHide);
     <button
       type="button"
       class="hud__btn hud__btn--text"
-      :aria-label="t('hud.quality.aria', { tier: qualityLabel })"
+      :aria-label="qualityAria"
+      :title="qualityAria"
       @click="$emit('cycle-quality')"
     >{{ qualityLabel }}</button>
 

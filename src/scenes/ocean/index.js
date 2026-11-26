@@ -98,15 +98,39 @@ export async function createOceanScene({ scene, camera, renderer, settings, stat
   const vents = createVents(scene, settings);
   const abyss = createAbyss(scene, camera, settings);
   const jellies = createJellyfish(scene, camera, settings);
-  const megalodon = createMegalodon(scene, camera, renderer, state, settings); // night mode only (see megalodon/index.js)
   const bloom = createBloom(renderer, scene, camera, settings);
   // Story scenery starts visible so the shader compile after loading includes it (update() hides what is
   // out of range on the first frame): no hitch the first time the dive reaches it.
-  for (const o of [glow.points, whale.mesh, vents.group, jellies.group, abyss.group, reef.group, ...reef.group.children, megalodon.group, ...megalodon.glowing]) o.visible = true;
+  for (const o of [glow.points, whale.mesh, vents.group, jellies.group, abyss.group, reef.group, ...reef.group.children]) o.visible = true;
   // What glows: rendered once more, alone, into the bloom (see bloom.js).
-  for (const o of [glow.points, ...jellies.group.children, ...whale.glowing, ...vents.glowing, ...abyss.glowing, ...reef.glowing, ...megalodon.glowing]) o.layers.enable(GLOW_LAYER);
-  // The megalodon is drawn black into the glow, so the jellyfish behind it do not shine through its body.
-  for (const o of megalodon.occluders) { o.layers.enable(GLOW_LAYER); megalodon.markOccluder(o, GLOW_LAYER); }
+  for (const o of [glow.points, ...jellies.group.children, ...whale.glowing, ...vents.glowing, ...abyss.glowing, ...reef.glowing]) o.layers.enable(GLOW_LAYER);
+
+  // The megalodon is met only at night, so it is not built while loading (a visitor who stays in day mode never
+  // pays for it). The first time night mode is on, it is built in the browser's idle time and its shaders are
+  // compiled in the background (both the normal pass and the glow pass), so neither its building nor its first
+  // appearance stalls a frame. Until then a stand-in with the same fields answers for it.
+  const STAND_IN = { followYaw: 0, followPitch: 0, fovKick: 0, applyCamera() {}, update() {}, setQuality() {}, dispose() {} };
+  let megalodon = STAND_IN;
+  let megalodonQueued = false;
+  let liveSettings = settings;
+  const whenIdle = (fn) => (window.requestIdleCallback ? window.requestIdleCallback(fn, { timeout: 1500 }) : setTimeout(fn, 200));
+  function buildMegalodon() {
+    if (megalodon !== STAND_IN) return;
+    const m = createMegalodon(scene, camera, renderer, state, liveSettings);
+    for (const o of m.glowing) o.layers.enable(GLOW_LAYER);
+    // Drawn black into the glow, so the jellyfish behind it do not shine through its body.
+    for (const o of m.occluders) { o.layers.enable(GLOW_LAYER); m.markOccluder(o, GLOW_LAYER); }
+    const burstPoints = m.glowing[1];
+    burstPoints.visible = true; // compiled with the rest (it is hidden until an impact)
+    const glowCamera = camera.clone();
+    glowCamera.layers.set(GLOW_LAYER);
+    Promise.all([renderer.compileAsync(m.group, camera, scene), renderer.compileAsync(m.group, glowCamera, scene)])
+      .catch(() => {}) // optional: the first frame would compile instead
+      .finally(() => { burstPoints.visible = false; });
+    m.group.visible = false; // its update shows it when an encounter begins
+    megalodon = m;
+    if (import.meta.env?.DEV && window.__ocean) window.__ocean.megalodon = m;
+  }
   await pause();
 
   const rig = createCameraRig(camera);
@@ -122,7 +146,7 @@ export async function createOceanScene({ scene, camera, renderer, settings, stat
   let speed = 0;
   let bloomAmount = 0;
   // Development only: `__ocean` in the console exposes the scene, camera and layers for inspection.
-  if (import.meta.env?.DEV && typeof window !== 'undefined') window.__ocean = { scene, camera, renderer, state, nightSky, megalodon, shafts, snow, plankton, streams, burst, atmosphere, glow, whale, vents, jellies, abyss, reef, bloom };
+  if (import.meta.env?.DEV && typeof window !== 'undefined') window.__ocean = { scene, camera, renderer, state, nightSky, megalodon: null, shafts, snow, plankton, streams, burst, atmosphere, glow, whale, vents, jellies, abyss, reef, bloom };
 
   return {
     update(dt, t) {
@@ -207,6 +231,7 @@ export async function createOceanScene({ scene, camera, renderer, settings, stat
       vents.update(dt, t, meters, vh);
       abyss.update(dt, t, meters, under, state.fx.abyss, rig.baseY, vh);
       jellies.update(dt, t, meters, under);
+      if (megalodon === STAND_IN && !megalodonQueued && state.mode === 'night') { megalodonQueued = true; whenIdle(buildMegalodon); }
       megalodon.update(dt, t, { meters, under, night: state.env.night, baseY: rig.baseY, viewportHeight: vh });
       // The camera's own travel and the pointer stir the water: the plants and glowing threads sway more.
       reef.update({ t, meters, under, light, absorb, stir: Math.min(1.2, speed * 0.04 + rig.atmosphere.energy * 0.8), viewportHeight: vh });
@@ -236,6 +261,7 @@ export async function createOceanScene({ scene, camera, renderer, settings, stat
       reef.setQuality(next);
       jellies.setQuality(next);
       whale.setQuality(next);
+      liveSettings = next;
       megalodon.setQuality(next);
       bloom.setQuality(next);
     },
