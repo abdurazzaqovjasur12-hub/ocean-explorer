@@ -92,6 +92,43 @@ spacer 10.1 screens tall (`.track` in `App.vue`), and a GSAP ScrollTrigger scrub
   material): cool light from above on the back, a rim strongest along the top, and the glowing wake lighting the
   belly from below. The explorer's lamp lights it too.
 
+## The reef and its vegetation
+
+The dive goes down beside a reef (`src/scenes/ocean/reef/`): a rock face ahead and to the left of the camera that
+ends just right of the middle of the view, its face receding into the haze, so the right of the frame stays open
+water where the light shafts hang (rock on one side, the blue on the other, on wide screens and phones alike).
+It is placed in the same metres as the depth counter (`depthToY`), so what the gauge says and what grows on screen
+agree. No animals: plants above 200 m, glowing growths below.
+
+| Depth | What grows | How |
+| --- | --- | --- |
+| 0 - 20 m | seagrass meadows on the crest | instanced tufts of arching blades |
+| 12 - 32 m | green and brown leafy algae | instanced clumps |
+| 20 - 70 m | the kelp forest: holdfasts on the slope, crown at 16 - 26 m | instanced, two levels of detail |
+| 70 - 200 m | sparse red algae on the ledges, pink coralline crusts on the rock | instanced (two LODs), crusts in the rock shader |
+| 200 - 1,300 m | glowing threads with a bead of light at the tip, mats of light, glowing films on the wall | instanced ribbons, points, rock shader |
+
+- **Shape** (`shape.js`): one cross-section (reef flat, crest just below the waves, the kelp slope coming towards the
+  camera so upright stipes stand clear of the rock, the drop-off, a wall leaning back into the deep), bent across
+  the view, cut into buttresses, rubble and ledges. Pure functions: the rock mesh, the plants and the glow all sit on it.
+- **Motion:** all in the vertex shaders: a slow surge along the current that runs up each stem, a crosswise roll,
+  and a quicker flutter at the tips; the camera's own travel and the pointer stir the water (plants sway harder).
+- **Light:** the scene's existing lights (daylight that loses its colours with depth, moonlight at night, the
+  explorer's lamp), read into uniforms each frame and evaluated **per vertex** (`lighting.js`): no light is added.
+  Leaves glow through against the light; their undersides get the light scattered in the water.
+- **Day and night:** follows the scene's night level like everything else: a moonlit, lamp-lit reef at night, and the
+  glow shows higher up (it brightens as the water around the camera darkens).
+- **Deep glow:** additive, on the bloom layer; the rock is drawn into the bloom as black (only its glowing films), so
+  it hides the glow behind it. Gone below the band; the rock itself fades into the water from 560 m and is not
+  drawn below 850 m (it would cover the frame there and could no longer be seen).
+
+**Performance:** ten draw calls at most (rock plus nine instanced layers), each hidden outside the camera depths it can be seen from
+(`bands.js`); the kelp and red algae have a detailed and a light mesh, chosen by distance from the dive; plants are
+only placed where the camera can see them; the rock's noise is baked once into a 256 x 256 texture (four reads instead of
+some twenty hashes per pixel); no per-plant work on the CPU. Densities per tier (`story.reef` in
+`config/quality.js`; phones get the medium or low tier: about half or a quarter of the plants). Measured on an
+integrated laptop GPU at 720p: about 2.5 - 3 ms per frame where the reef fills the view, nothing below 850 m.
+
 ## Hydrothermal vents
 
 `scenes/ocean/vents.js`, nine draw calls, all animated on the GPU, hidden outside 2,300 to 3,250 m. Everything is

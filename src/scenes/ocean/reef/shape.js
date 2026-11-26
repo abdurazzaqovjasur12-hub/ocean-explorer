@@ -36,8 +36,8 @@ const PROFILE = [
 ].map(([z, m]) => new THREE.Vector2(z, depthToY(m)));
 
 /** The rock mesh spans x from REEF_X[0] to REEF_X[1]; past REEF_END the face turns away into the distance. */
-export const REEF_X = [-90, 24];
-const REEF_END = -1;
+export const REEF_X = [-90, 36];
+const REEF_END = -7;
 const curve = new THREE.SplineCurve(PROFILE);
 curve.arcLengthDivisions = 3000;
 export const PROFILE_LENGTH = curve.getLength();
@@ -101,7 +101,7 @@ export function reefPoint(x, s, out = new THREE.Vector3()) {
   const deep = smoothstep(200, 700, m);
   const shallow = smoothstep(14, 40, m); // gentler relief on the crest
   const cove = (-3 * Math.exp(-((x / 14) ** 2)) + 10 * smoothstep(10, 36, -x)) * lerp(1, 0.3, deep);
-  const turn = x > REEF_END ? -((x - REEF_END) ** 1.7) * 0.55 : 0; // the end of the reef, turning away
+  const turn = x > REEF_END ? -((x - REEF_END) ** 1.45) * 0.45 : 0; // the end of the reef, receding obliquely into the haze
   const bend = (fbm(x * 0.025 + 3, 0.5, 2) - 0.5) * lerp(8, 5, deep);
   const big = ((fbm(x * 0.07, s * 0.05, 3) - 0.5) * lerp(2.2, 4.2, deep) + (fbm(x * 0.16 + 9, s * 0.025, 2) - 0.5) * 2.4) * lerp(0.35, 1, shallow); // buttresses, gullies
   const rock = (fbm(x * 0.3 + 5.2, s * 0.3 - 1.1, 3) - 0.5) * lerp(0.6, 1.2, shallow); // rubble
