@@ -2,7 +2,12 @@ import { defineConfig } from 'vite';
 import vue from '@vitejs/plugin-vue';
 import { fileURLToPath, URL } from 'node:url';
 
-export default defineConfig({
+// The site is published on GitHub Pages at https://abdurazzaqovjasur12-hub.github.io/ocean-explorer/, so the
+// production build is served from /ocean-explorer/: every script, stylesheet and file in public/ is linked under
+// it (code that fetches files reads import.meta.env.BASE_URL, see src/audio/files.js). `npm run preview` serves the
+// build the same way (http://localhost:4173/ocean-explorer/); the dev server stays at /.
+export default defineConfig(({ command, isPreview }) => ({
+  base: command === 'build' || isPreview ? '/ocean-explorer/' : '/',
   plugins: [vue()],
   resolve: {
     alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
@@ -16,4 +21,4 @@ export default defineConfig({
       output: { manualChunks: { three: ['three'], vue: ['vue'], gsap: ['gsap'] } },
     },
   },
-});
+}));
