@@ -11,6 +11,7 @@ import { createLightShafts } from './createLightShafts';
 import { createCameraRig } from './cameraRig';
 import { createAtmosphere } from './atmosphere';
 import { createSky } from './createSky';
+import { createNightSky } from './nightSky';
 import { createOceanSurface } from './createOceanSurface';
 import { createBioluminescence } from './bioluminescence';
 import { createWhale } from './whale';
@@ -18,6 +19,7 @@ import { createVents } from './vents';
 import { createAbyss } from './abyss';
 import { createReef } from './reef';
 import { createJellyfish } from './jellyfish';
+import { createMegalodon } from './megalodon';
 import { createBloom, GLOW_LAYER } from './bloom';
 import { smoothstep } from '@/utils/math';
 
@@ -51,6 +53,7 @@ export async function createOceanScene({ scene, camera, renderer, settings, stat
   report(0.18, 'loading.sky');
   const atmosphere = createAtmosphere();
   const sky = createSky(scene, atmosphere, settings);
+  const nightSky = createNightSky(scene, atmosphere, settings);
   await pause();
 
   report(0.34, 'loading.swell');
@@ -95,12 +98,15 @@ export async function createOceanScene({ scene, camera, renderer, settings, stat
   const vents = createVents(scene, settings);
   const abyss = createAbyss(scene, camera, settings);
   const jellies = createJellyfish(scene, camera, settings);
+  const megalodon = createMegalodon(scene, camera, renderer, state, settings); // night mode only (see megalodon/index.js)
   const bloom = createBloom(renderer, scene, camera, settings);
   // Story scenery starts visible so the shader compile after loading includes it (update() hides what is
   // out of range on the first frame): no hitch the first time the dive reaches it.
-  for (const o of [glow.points, whale.mesh, vents.group, jellies.group, abyss.group, reef.group, ...reef.group.children]) o.visible = true;
+  for (const o of [glow.points, whale.mesh, vents.group, jellies.group, abyss.group, reef.group, ...reef.group.children, megalodon.group, ...megalodon.glowing]) o.visible = true;
   // What glows: rendered once more, alone, into the bloom (see bloom.js).
-  for (const o of [glow.points, ...jellies.group.children, ...whale.glowing, ...vents.glowing, ...abyss.glowing, ...reef.glowing]) o.layers.enable(GLOW_LAYER);
+  for (const o of [glow.points, ...jellies.group.children, ...whale.glowing, ...vents.glowing, ...abyss.glowing, ...reef.glowing, ...megalodon.glowing]) o.layers.enable(GLOW_LAYER);
+  // The megalodon is drawn black into the glow, so the jellyfish behind it do not shine through its body.
+  for (const o of megalodon.occluders) { o.layers.enable(GLOW_LAYER); megalodon.markOccluder(o, GLOW_LAYER); }
   await pause();
 
   const rig = createCameraRig(camera);
@@ -116,7 +122,7 @@ export async function createOceanScene({ scene, camera, renderer, settings, stat
   let speed = 0;
   let bloomAmount = 0;
   // Development only: `__ocean` in the console exposes the scene, camera and layers for inspection.
-  if (import.meta.env?.DEV && typeof window !== 'undefined') window.__ocean = { scene, camera, renderer, state, shafts, snow, plankton, streams, burst, atmosphere, glow, whale, vents, jellies, abyss, reef, bloom };
+  if (import.meta.env?.DEV && typeof window !== 'undefined') window.__ocean = { scene, camera, renderer, state, nightSky, megalodon, shafts, snow, plankton, streams, burst, atmosphere, glow, whale, vents, jellies, abyss, reef, bloom };
 
   return {
     update(dt, t) {
@@ -124,12 +130,13 @@ export async function createOceanScene({ scene, camera, renderer, settings, stat
       const b = state.cam;
       shot.idle = a.idle * b.idle;
       shot.heave = a.heave + b.heave;
-      shot.fov = a.fov + b.fov;
-      shot.pitch = a.pitch + b.pitch + whale.followPitch;
+      shot.fov = a.fov + b.fov + megalodon.fovKick;
+      shot.pitch = a.pitch + b.pitch + whale.followPitch + megalodon.followPitch;
       shot.push = a.push + b.push;
-      shot.yaw = (b.yaw ?? 0) + whale.followYaw;
+      shot.yaw = (b.yaw ?? 0) + whale.followYaw + megalodon.followYaw;
       shot.x = b.x ?? 0;
       rig.update(dt, t, state.depth, shot);
+      megalodon.applyCamera(t); // the impact's shake and push (nothing at all outside an encounter)
       const meters = metersBelowSurface(rig.baseY);
       state.meters = meters;
       // A jump of many units in one frame is a cut (a deep link, or a fade between far chapters), not travel:
@@ -160,6 +167,7 @@ export async function createOceanScene({ scene, camera, renderer, settings, stat
       absorptionColor(meters, absorb);
 
       sky.update(camera);
+      nightSky.update(dt, state.env.night, under, renderer?.domElement?.height ?? 720);
       lights.update(meters, camera.position);
       environment.update(dt);
       shafts.update({ under, meters, rayDir: u.uRayDir.value });
@@ -199,6 +207,7 @@ export async function createOceanScene({ scene, camera, renderer, settings, stat
       vents.update(dt, t, meters, vh);
       abyss.update(dt, t, meters, under, state.fx.abyss, rig.baseY, vh);
       jellies.update(dt, t, meters, under);
+      megalodon.update(dt, t, { meters, under, night: state.env.night, baseY: rig.baseY, viewportHeight: vh });
       // The camera's own travel and the pointer stir the water: the plants and glowing threads sway more.
       reef.update({ t, meters, under, light, absorb, stir: Math.min(1.2, speed * 0.04 + rig.atmosphere.energy * 0.8), viewportHeight: vh });
       bloomAmount = smoothstep(250, 650, meters) * under;
@@ -219,6 +228,7 @@ export async function createOceanScene({ scene, camera, renderer, settings, stat
       ascent.setLimit(next.underwater.ascent);
       shafts.setQuality(next);
       sky.setQuality(next);
+      nightSky.setQuality(next);
       surface.setQuality(next);
       glow.setCount(next.story.glow);
       vents.setQuality(next);
@@ -226,11 +236,13 @@ export async function createOceanScene({ scene, camera, renderer, settings, stat
       reef.setQuality(next);
       jellies.setQuality(next);
       whale.setQuality(next);
+      megalodon.setQuality(next);
       bloom.setQuality(next);
     },
     dispose() {
       rig.dispose();
       jellies.dispose();
+      megalodon.dispose();
       bloom.dispose();
     },
   };

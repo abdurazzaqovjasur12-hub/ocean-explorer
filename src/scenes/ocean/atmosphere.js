@@ -45,6 +45,10 @@ export function createAtmosphere() {
     uDepthLight: { value: 1 }, // how much sunlight is left at the camera's depth
     uMeters: { value: 0 }, // camera depth in metres
     uNight: { value: 0 }, // 0 day .. 1 moonlit night
+    // Shooting stars (chosen in nightSky.js, drawn by the sky shader): start direction + progress (< 0: idle),
+    // direction of travel + arc length.
+    uMeteorA: { value: [new THREE.Vector4(0, 1, 0, -1), new THREE.Vector4(0, 1, 0, -1)] },
+    uMeteorB: { value: [new THREE.Vector4(1, 0, 0, 0), new THREE.Vector4(1, 0, 0, 0)] },
   };
   const speed = prefersReducedMotion() ? 0.45 : 1;
   const rgb = { r: 0, g: 0, b: 0 };

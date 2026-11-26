@@ -1,12 +1,15 @@
-import { noiseChunk, skyChunk, wavesChunk, underwaterChunk } from './chunks';
+import { noiseChunk, skyChunk, wavesChunk, underwaterChunk, auroraChunk } from './chunks';
 
 export const oceanVertex = /* glsl */ `
 varying vec2 vParam; // undisplaced position: where the waves are sampled
 varying vec3 vWorld; // displaced position
+varying vec3 vAurora; // the aurora reflected here (per vertex: soft, and cheap)
 uniform float uGridStep;
+uniform float uNight;
 
 ${noiseChunk}
 ${wavesChunk}
+${auroraChunk}
 
 void main() {
   vec2 p0 = (modelMatrix * vec4(position, 1.0)).xz;
@@ -16,15 +19,25 @@ void main() {
   vec3 pos = vec3(p0.x + w.disp.x, w.disp.y, p0.y + w.disp.z);
   vParam = p0;
   vWorld = pos;
+  vAurora = vec3(0.0);
+  if (uNight > 0.001) {
+    vec3 V = normalize(cameraPosition - pos);
+    vec3 N = normalize(vec3(-w.slope.x, 1.0, -w.slope.y));
+    vec3 R = reflect(-V, N);
+    R.y = abs(R.y);
+    vAurora = aurora(R, uTime, false) * uNight;
+  }
   gl_Position = projectionMatrix * viewMatrix * vec4(pos, 1.0);
 }
 `;
 
 export const oceanFragment = /* glsl */ `
+#define SKY_NO_REFLECTED_AURORA
 #include <common>
 #include <dithering_pars_fragment>
 varying vec2 vParam;
 varying vec3 vWorld;
+varying vec3 vAurora;
 
 uniform vec3 uSunDir;
 uniform vec3 uSunColor;
@@ -133,7 +146,7 @@ void main() {
     float Fs = 0.02 + 0.98 * pow(1.0 - clamp01(dot(V, H)), 5.0);
     float spec = D * Fs / (4.0 * max(cosV, 0.08));
 
-    col = mix(body, sky, F) + uSunColor * (spec * 0.55);
+    col = mix(body, sky + vAurora * 0.45, F) + uSunColor * (spec * 0.55);
 
     // Foam where the surface bunches up at the crests, broken up with noise.
     // (With these moderate waves the Jacobian only dips to about 0.75, so the thresholds sit high.)

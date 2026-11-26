@@ -17,12 +17,14 @@ export function underwaterAmount(depth, heave = 0) {
  *  - the first click, tap or key press unlocks and starts audio (browsers refuse to before that)
  *  - the engine's real state is copied into `state` so the button always shows the truth
  *  - depth, the dive and the surface break drive the sounds
- *  - the tab being hidden silences and idles the audio
+ *  - the day / night mode crossfades the soundtrack (state.mode; the visuals have their own easing)
+ *  - the megalodon encounter (state.encounter, night only): its drone follows `tension`, each cue counter plays once
+ *  - the tab being hidden silences and idles the audio; coming back (also from the back-forward cache) resumes it
  * `subscribe(getter, callback, options)` is Vue's watch() in the app.
  */
 export function createAudioBridge({ engine, state, subscribe, doc = document, win = window }) {
   const sync = (s) => {
-    Object.assign(state.audio, { enabled: s.enabled, volume: s.volume, unlocked: s.unlocked, contextState: s.contextState, error: s.error });
+    Object.assign(state.audio, { enabled: s.enabled, volume: s.volume, music: s.music, effects: s.effects, unlocked: s.unlocked, contextState: s.contextState, error: s.error });
     state.soundOn = s.audible;
   };
   const offEngine = engine.on(sync);
@@ -40,6 +42,9 @@ export function createAudioBridge({ engine, state, subscribe, doc = document, wi
   doc.addEventListener('visibilitychange', onVisibility);
   const onPageHide = () => engine.pause();
   win.addEventListener('pagehide', onPageHide);
+  // A page restored from the back-forward cache gets no visibilitychange: without this its sound stayed paused.
+  const onPageShow = () => { if (!doc.hidden) engine.resume(); };
+  win.addEventListener('pageshow', onPageShow);
 
   const onKey = (e) => {
     if (e.key?.toLowerCase() !== 'm' || e.ctrlKey || e.metaKey || e.altKey) return;
@@ -53,13 +58,20 @@ export function createAudioBridge({ engine, state, subscribe, doc = document, wi
     // The camera height is the dive parameter plus both heaves (the scroll camera and the arrival).
     subscribe(() => [state.depth, state.shot.heave + (state.cam?.heave ?? 0), state.meters], ([depth, heave, meters]) => engine.setEnvironment({ depth: meters ?? depth, under: underwaterAmount(depth, heave) }), { immediate: true }),
     subscribe(() => state.fx.burstId, (n, o) => { if (n !== o) engine.cue('plunge'); }),
+    subscribe(() => state.mode, (mode) => engine.setMode(mode), { immediate: true }),
     // Scrolling from the surface into the descent: the rush of air as the dive begins.
     subscribe(() => state.story?.chapter, (n, o) => { if (o === 0 && n === 1) engine.cue('dive'); }),
+    // The megalodon (the engine plays none of this in day mode).
+    subscribe(() => state.encounter?.tension ?? 0, (v) => engine.setEncounter(v), { immediate: true }),
+    ...[['warningId', 'megWarning'], ['rushId', 'megRush'], ['impactId', 'megImpact'], ['passId', 'megPass']].map(([key, name]) =>
+      subscribe(() => state.encounter?.[key] ?? 0, (n, o) => { if (n > o) engine.cue(name); })),
   ];
 
   return {
     toggle: () => engine.toggle(),
     setVolume: (v) => engine.setVolume(v),
+    setMusicVolume: (v) => engine.setMusicVolume(v),
+    setEffectsVolume: (v) => engine.setEffectsVolume(v),
     cue: (name) => engine.cue(name),
     dispose() {
       offEngine();
@@ -67,6 +79,7 @@ export function createAudioBridge({ engine, state, subscribe, doc = document, wi
       GESTURES.forEach((type) => doc.removeEventListener(type, onGesture, { capture: true }));
       doc.removeEventListener('visibilitychange', onVisibility);
       win.removeEventListener('pagehide', onPageHide);
+      win.removeEventListener('pageshow', onPageShow);
       doc.removeEventListener('keydown', onKey);
     },
   };

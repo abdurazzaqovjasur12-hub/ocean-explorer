@@ -7,7 +7,7 @@ export function createSky(scene, atmosphere, settings) {
     vertexShader: skyVertex,
     fragmentShader: skyFragment,
     uniforms: { ...atmosphere.uniforms },
-    defines: { SKY_CLOUD_OCT: settings.ocean.skyClouds },
+    defines: { SKY_CLOUD_OCT: settings.ocean.skyClouds, MILKY_OCT: settings.night.milky, AURORA_LAYERS: settings.night.aurora, AURORA_RAY_LAYERS: settings.night.rays },
     side: THREE.BackSide,
     depthTest: false,
     depthWrite: false,
@@ -24,6 +24,9 @@ export function createSky(scene, atmosphere, settings) {
     },
     setQuality(next) {
       material.defines.SKY_CLOUD_OCT = next.ocean.skyClouds;
+      material.defines.MILKY_OCT = next.night.milky;
+      material.defines.AURORA_LAYERS = next.night.aurora;
+      material.defines.AURORA_RAY_LAYERS = next.night.rays;
       material.needsUpdate = true;
     },
   };

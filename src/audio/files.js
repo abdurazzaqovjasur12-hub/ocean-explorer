@@ -1,10 +1,18 @@
-// Optional recorded audio. The system works with no files at all (everything is generated), but if you
-// drop a recording at one of these paths it is used instead, and every problem is reported clearly.
+// Optional recorded music. The system works with no files at all (all of its sound is generated), so by default
+// nothing is requested: a file that is not there would only cost a request and a 404 in the console.
+//
+// To use your own (original or properly licensed) recordings, put them in public/audio/ and list them here:
+//
+//   export const AUDIO_FILES = {
+//     musicDay: { url: 'audio/music-day.mp3', mode: 'day', loop: true },
+//     musicNight: { url: 'audio/music-night.mp3', mode: 'night', loop: true },
+//   };
+//
+// A recording replaces the generated piece of its mode and takes its place in the day / night crossfade. If one
+// is missing or cannot be decoded, the console says exactly why and the generated music keeps playing.
 
-/** Paths are relative to the site root (public/). `music` replaces the generated music with a looping recording. */
-export const AUDIO_FILES = {
-  music: { url: 'audio/music.mp3', loop: true },
-};
+/** Paths are relative to the site root (public/). */
+export const AUDIO_FILES = {};
 
 const baseUrl = () => (typeof import.meta !== 'undefined' && import.meta.env?.BASE_URL) || '/';
 

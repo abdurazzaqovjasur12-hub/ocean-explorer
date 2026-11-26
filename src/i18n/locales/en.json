@@ -66,7 +66,13 @@
       "off": "Turn sound off",
       "unavailable": "Sound unavailable"
     },
-    "volume": "Volume",
+    "audio": {
+      "settings": "Sound settings",
+      "master": "Master",
+      "music": "Music",
+      "effects": "Effects",
+      "mute": "Mute"
+    },
     "language": {
       "button": "Language: {name}. Choose a language",
       "menu": "Choose a language"
@@ -148,5 +154,64 @@
     "note": "More than eighty percent of the ocean has never been mapped, observed or explored.",
     "replay": "Replay expedition",
     "explore": "Explore again"
+  },
+  "megalodon": {
+    "warning": {
+      "title": "DANGER DETECTED",
+      "subtitle": "MEGALODON APPROACHING"
+    },
+    "hint": "Tap or click the megalodon to learn about it",
+    "calm": {
+      "label": "Less motion",
+      "aria": "Reduce camera shake and screen effects"
+    },
+    "card": {
+      "aria": "About the megalodon",
+      "close": "Close",
+      "kicker": "Prehistoric shark",
+      "name": "Megalodon",
+      "scientific": "Otodus megalodon",
+      "legend": "Confirmed: known from the fossil record. Estimate: calculated by scientists, given as a range. Hypothesis: a leading explanation that is still debated.",
+      "tags": {
+        "confirmed": "Confirmed",
+        "estimate": "Estimate",
+        "hypothesis": "Hypothesis"
+      },
+      "status": {
+        "label": "Status",
+        "value": "Extinct prehistoric shark"
+      },
+      "length": {
+        "label": "Length",
+        "value": "About 15–20 m for large adults; some studies suggest the largest exceeded 20 m. Worked out from teeth and vertebrae: no complete skeleton is known."
+      },
+      "weight": {
+        "label": "Weight",
+        "value": "Tens of tonnes. One 2022 3D reconstruction put a 16 m shark at about 61 t; other estimates differ widely."
+      },
+      "period": {
+        "label": "Period",
+        "value": "Early Miocene to early Pliocene, roughly 23 to 3.6 million years ago"
+      },
+      "habitat": {
+        "label": "Habitat and range",
+        "value": "Warm and temperate seas worldwide, from coastal shelves to the open ocean. Its teeth are found on every continent except Antarctica."
+      },
+      "diet": {
+        "label": "Diet",
+        "value": "A top predator of large prey: whales and other marine mammals, and large fish. Bite marks on fossil whale bones show it."
+      },
+      "factsTitle": "Scientific facts",
+      "facts": {
+        "f1": "It is known almost only from teeth and vertebrae: a shark’s skeleton is cartilage, which rarely fossilises.",
+        "f2": "Its teeth are triangular and serrated, and can be more than 17 cm long: among the largest of any shark.",
+        "f3": "The chemistry of its tooth enamel (a 2023 study) suggests it was partly warm-blooded, about 7 °C warmer than the water around it.",
+        "f4": "Young megalodons seem to have grown up in warm, shallow coastal nurseries; one was identified in Panama.",
+        "f5": "Why it died out is still debated: cooling seas, changes in its prey and competition, possibly with the great white shark.",
+        "f6": "Its exact shape is unknown. Recent studies (2024–2025) suggest a more slender body than older reconstructions modelled on the great white.",
+        "f7": "It was not the ancestor of the great white shark: the two belong to different families."
+      },
+      "note": "The shark shown is an artistic reconstruction: what the megalodon really looked like is unknown. This dive shows it in the deep; the fossils show it lived mostly in the upper waters of warm coastal and open seas."
+    }
   }
 }

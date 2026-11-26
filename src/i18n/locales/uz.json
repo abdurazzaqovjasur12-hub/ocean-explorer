@@ -66,7 +66,13 @@
       "off": "Ovozni o‘chirish",
       "unavailable": "Ovoz mavjud emas"
     },
-    "volume": "Ovoz balandligi",
+    "audio": {
+      "settings": "Ovoz sozlamalari",
+      "master": "Umumiy",
+      "music": "Musiqa",
+      "effects": "Effektlar",
+      "mute": "Ovozni o‘chirish"
+    },
     "language": {
       "button": "Til: {name}. Tilni tanlang",
       "menu": "Tilni tanlang"
@@ -148,5 +154,64 @@
     "note": "Okeanning sakson foizidan ko‘prog‘i hali xaritaga tushirilmagan, kuzatilmagan va o‘rganilmagan.",
     "replay": "Ekspeditsiyani takrorlash",
     "explore": "Yana kashf etish"
+  },
+  "megalodon": {
+    "warning": {
+      "title": "XAVF ANIQLANDI",
+      "subtitle": "MEGALODON YAQINLASHMOQDA"
+    },
+    "hint": "Batafsil ma’lumot uchun megalodonni bosing",
+    "calm": {
+      "label": "Kamroq harakat",
+      "aria": "Kamera silkinishi va ekran effektlarini kamaytirish"
+    },
+    "card": {
+      "aria": "Megalodon haqida ma’lumot",
+      "close": "Yopish",
+      "kicker": "Qadimiy akula",
+      "name": "Megalodon",
+      "scientific": "Otodus megalodon",
+      "legend": "Tasdiqlangan: qazilmalardan ma’lum. Ilmiy taxmin: olimlar hisoblagan oraliq. Faraz: asosiy, ammo hali bahsli tushuntirish.",
+      "tags": {
+        "confirmed": "Tasdiqlangan",
+        "estimate": "Ilmiy taxmin",
+        "hypothesis": "Faraz"
+      },
+      "status": {
+        "label": "Holati",
+        "value": "Yo‘q bo‘lib ketgan qadimiy akula"
+      },
+      "length": {
+        "label": "Uzunligi",
+        "value": "Katta voyaga yetganlari taxminan 15–20 m; ba’zi tadqiqotlarga ko‘ra eng yiriklari 20 m dan oshgan. Tishlar va umurtqalar asosida hisoblangan: to‘liq skelet topilmagan."
+      },
+      "weight": {
+        "label": "Og‘irligi",
+        "value": "O‘nlab tonna. 2022-yilgi 3D rekonstruksiyaga ko‘ra 16 metrli akula taxminan 61 tonna bo‘lgan; boshqa hisob-kitoblar ancha farq qiladi."
+      },
+      "period": {
+        "label": "Davri",
+        "value": "Ilk miotsendan ilk pliotsengacha, taxminan 23–3,6 million yil avval"
+      },
+      "habitat": {
+        "label": "Yashash joyi va tarqalishi",
+        "value": "Butun dunyodagi iliq va mo‘tadil dengizlar: qirg‘oq bo‘yi sayozliklaridan ochiq okeangacha. Tishlari Antarktidadan boshqa barcha qit’alarda topilgan."
+      },
+      "diet": {
+        "label": "Ozuqasi",
+        "value": "Yirik o‘ljalarning eng yuqori yirtqichi: kitlar va boshqa dengiz sutemizuvchilari, yirik baliqlar. Kit suyaklari qazilmalaridagi tish izlari buni ko‘rsatadi."
+      },
+      "factsTitle": "Ilmiy faktlar",
+      "facts": {
+        "f1": "U deyarli faqat tishlari va umurtqalari orqali ma’lum: akula skeleti tog‘aydan iborat va kamdan-kam qazilmaga aylanadi.",
+        "f2": "Tishlari uchburchak, arra kabi qirrali va 17 sm dan uzun bo‘lishi mumkin: barcha akulalar ichida eng yiriklaridan.",
+        "f3": "Tish emalining kimyoviy tahlili (2023-yilgi tadqiqot) u qisman issiqqonli bo‘lganini ko‘rsatadi: tanasi atrofdagi suvdan taxminan 7 °C issiqroq bo‘lgan.",
+        "f4": "Bolalari iliq va sayoz qirg‘oq suvlaridagi maxsus joylarda o‘sgan ko‘rinadi; shunday joylardan biri Panamada aniqlangan.",
+        "f5": "Nima sababdan yo‘qolib ketgani hali ham bahsli: dengizlarning sovishi, o‘ljalarning o‘zgarishi va raqobat, ehtimol oq akula bilan.",
+        "f6": "Tanasining aniq shakli noma’lum. So‘nggi tadqiqotlar (2024–2025) u oq akulaga o‘xshatib qilingan eski rekonstruksiyalardan ingichkaroq bo‘lganini taxmin qiladi.",
+        "f7": "U oq akulaning ajdodi emas: ikkalasi turli oilalarga mansub."
+      },
+      "note": "Ko‘rsatilgan akula rassom rekonstruksiyasi: megalodonning haqiqiy qiyofasi noma’lum. Bu sho‘ng‘ishda u chuqurlikda ko‘rsatilgan; qazilmalar esa u asosan iliq qirg‘oq va ochiq dengizlarning yuqori qatlamlarida yashaganini ko‘rsatadi."
+    }
   }
 }

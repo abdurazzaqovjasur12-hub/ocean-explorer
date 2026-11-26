@@ -1,6 +1,7 @@
 import { reactive } from 'vue';
 import { detectDevice, forcedQuality, pickQuality } from '@/utils/device';
 import { storedMode } from '@/utils/mode';
+import { prefersReducedMotion, storedCalmMotion } from '@/utils/motion';
 
 const device = detectDevice();
 // `?intro=0` skips the arrival and starts underwater, at the end of the descent (handy while developing).
@@ -37,6 +38,13 @@ export const appState = reactive({
   fx: { snow: 0, whale: 0, abyss: 0, ascent: 0, burstId: 0, breachId: 0 },
   // Where the scroll story is: progress 0..1 along the whole story and the current chapter index.
   story: { progress: 0, chapter: 0, ready: false },
+  // "Less motion" (remembered; the system setting until chosen): the megalodon encounter without shake, flashes or blur.
+  calmMotion: storedCalmMotion() ?? prefersReducedMotion(),
+  // The megalodon encounter (night mode only; scenes/ocean/megalodon). Written by the scene: whether one is under
+  // way, its phase, the warning and the hint on screen, `tension` (0..1, the low drone), and counters bumped for
+  // each cue (sound and screen effects). `card`: the information card is open (tapping the shark sets it).
+  encounter: { active: false, kind: null, phase: 'idle', warning: false, hint: false, tension: 0, warningId: 0, rushId: 0, impactId: 0, passId: 0, card: false, count: 0 },
   soundOn: false, // true only while sound is really coming out (set by the audio bridge)
-  audio: { enabled: true, volume: 0.7, unlocked: false, contextState: 'none', error: null },
+  // Set by the audio bridge: enabled = not muted; volume = master; music and effects 0..1 (all remembered).
+  audio: { enabled: true, volume: 0.7, music: 0.8, effects: 0.8, unlocked: false, contextState: 'none', error: null },
 });

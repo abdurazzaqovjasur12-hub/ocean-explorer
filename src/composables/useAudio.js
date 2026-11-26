@@ -3,7 +3,7 @@ import { appState } from '@/state/appState';
 import { getAudioEngine } from '@/audio/engine';
 import { createAudioBridge } from '@/audio/bridge';
 
-/** Sound for the app: { toggle, setVolume, cue }. The first user gesture starts the audio system. */
+/** Sound for the app: { toggle, setVolume, setMusicVolume, setEffectsVolume, cue }. The first user gesture starts the audio system. */
 export function useAudio() {
   const bridge = createAudioBridge({
     engine: getAudioEngine(),
@@ -11,5 +11,5 @@ export function useAudio() {
     subscribe: (getter, callback, options) => watch(getter, callback, options),
   });
   onBeforeUnmount(() => bridge.dispose());
-  return { toggle: bridge.toggle, setVolume: bridge.setVolume, cue: bridge.cue };
+  return { toggle: bridge.toggle, setVolume: bridge.setVolume, setMusicVolume: bridge.setMusicVolume, setEffectsVolume: bridge.setEffectsVolume, cue: bridge.cue };
 }

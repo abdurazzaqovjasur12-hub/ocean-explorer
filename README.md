@@ -92,6 +92,64 @@ spacer 10.1 screens tall (`.track` in `App.vue`), and a GSAP ScrollTrigger scrub
   material): cool light from above on the back, a rim strongest along the top, and the glowing wake lighting the
   belly from below. The explorer's lamp lights it too.
 
+## Megalodon encounter (night mode only)
+
+`scenes/ocean/megalodon/` (`geometry.js`, `skin.js`, `particles.js`, `index.js`), `components/EncounterWarning.vue`,
+`components/MegalodonCard.vue`. It is met in the dark around the bioluminescence chapter (~900 m), only at night.
+
+- **Night only, in one place** (`megalodon/index.js`): an encounter can begin only while the mode is night, the
+  night has fully come in, the camera is underwater and between 800 and 1,120 m (and it has stayed there 1.4 s).
+  The moment that stops being true (switching to day, scrolling out of 700 to 1,300 m, surfacing) it is called
+  off: every event still to come is dropped, the warning and hint go, the camera and the music ease back, the
+  drone fades, and the shark dissolves into the dark water in about a second. Between encounters nothing of it is
+  drawn or updated. The audio engine checks the mode again before playing any of its sounds.
+- **Model:** procedural, one merged mesh per level of detail (the near one with mouth and teeth; a far one, about
+  a fifth of the triangles, for the silhouette in the fog; `THREE.LOD` switches at 52 units). Drawn as a 17 m animal
+  (published estimates for large adults: about 15 to 20 m). The scene has no single metric scale (the dive is
+  compressed about twenty to one to fit the scroll, and the jellyfish are large), so its size is set against what
+  is around it: 1.6 units per metre, about 27 units from snout to tail tip, half again the whale. It is scaled
+  evenly, so the head, jaw, fins and tail keep their proportions. Short conical snout, deep body, tall first dorsal fin, long
+  swept pectorals, a crescent tail with keels, five gill slits, an underslung jaw that opens on a hinge, rows of
+  triangular teeth, small dark eyes. It is a reconstruction (the card says so): only teeth and vertebrae survive.
+- **Skin** (`skin.js`): the scene's own lights (faint moonlight, and the explorer's lamp, which is what reveals the
+  face as it comes close), plus a rim and downwelling light of its own and a faint eyeshine. Countershading with a
+  wandering line, dermal denticles as a fine streaked bump (faded with distance; off on the low tier), gill
+  relief, a few pale scars. Its noise comes from the reef's baked noise texture (a few reads instead of dozens of
+  hashes per pixel). Close to the lens its exposure is held back so the lamp never burns it out to white. It is
+  drawn black into the bloom pass, so the jellyfish behind it do not glow through it.
+- **Movement:** a side-to-side tail beat in the vertex shader (a wave running back to the tail, a little recoil of
+  the head), the body curving into turns and banking; the beat quickens with speed; the jaw opens on its hinge.
+  The normals are turned with the bend. No CPU work per vertex.
+- **The first encounter** (`SCRIPTS.first`, ~20 s): a shadow far off in the fog, a slow approach, the warning
+  (6.8 s), the face coming into the lamp's light, a sudden rush straight at the camera (11 s; the snout stops about
+  1.7 units from the lens, the lens narrows a little, and the head fills nearly the whole frame): a shake, a push back, a
+  short blur of the frame and a longer one at the edges, a darkening that lifts, sparks stirred up in the water,
+  the impact sound. At the last moment it veers, its head swinging aside under the darkening (it turns about its
+  centre, so nothing comes on at the lens; the nearest any vertex comes is measured in development with
+  `trackClearance`); then its flank passes broadside about 9 units away, filling the width of the screen, its tail
+  sweeping past in front of the lens, and it swims off into the dark. The
+  path is set relative to the camera (smoothed), so a little scrolling does not spoil it; the camera turns partway
+  to follow it. Later encounters are natural passes at a distance, with no rush (`SCRIPTS.passes`, 35 s apart).
+- **Warning:** "XAVF ANIQLANDI / MEGALODON YAQINLASHMOQDA" (`megalodon.warning.*` in the three languages): red
+  with a soft red glow, it flickers on, the interface flickers briefly, the screen edges glow faintly red; it
+  fades after about 3 s. The chapter text steps back while the shark is close.
+- **Less motion:** a switch under the warning and in the card (remembered; follows the system's reduced-motion
+  setting until chosen): no shake, push, blur or flicker, only a gentle darkening.
+- **Information card:** the hint ("tap the megalodon") shows only while some of it is really in the frame; tap or click the shark (a few spheres along its spine are hit-tested; the pointer
+  becomes a hand over it on desktop). Name, scientific name, status, length, weight, period, habitat and range,
+  diet, seven facts; each marked Confirmed, Estimate or Hypothesis. No lifespan or exact size is given. A panel on
+  the right on wide screens, a sheet from the bottom on phones; Esc, the close button or a tap elsewhere closes it.
+- **Sound** (the existing engine, no second audio manager): a low drone layer (started once, only its level
+  moves, so it can never double up) that rises with the approach while the music ducks a little; a soft
+  sonar-like warning, the rush, a short deep impact and the tail's sweep, each played once per cue. All of it
+  follows the master and effects volumes and mute, and is silent in day mode.
+- **Per tier** (`story.megalodon`): body rings and sides 56x22 / 80x30 / 110x40 (far level 26x12 / 30x14 /
+  34x16), teeth per row 14 / 20 / 24, wake sparks 120 / 220 / 360, impact sparks 60 / 110 / 160, skin relief off /
+  on / on; the frame blur is skipped on the low tier.
+- **Cost:** two draw calls (body, wake) while it is there, three for the 2 s of the impact sparks, none at all
+  otherwise. No new lights, no shadow maps. At a distance it costs next to nothing; when it fills the frame during
+  the close pass, a few milliseconds on an integrated GPU.
+
 ## The reef and its vegetation
 
 The dive goes down beside a reef (`src/scenes/ocean/reef/`): a rock face ahead and to the left of the camera that
@@ -318,10 +376,27 @@ for both: no scene, shader set or timeline is duplicated.
   ~2,500 m day and night are the same, as they are in the real ocean. Shaders get it as `uNight` through the
   shared atmosphere uniforms.
 - **Night sky** (`skyChunk` in `shaders/chunks.js`, shared by the sky dome, the sea's reflections, the
-  horizon haze and Snell's window from below): a deep blue-black gradient, a cool moon (larger and dimmer than
-  the sun, higher and to the right, so its silver path crosses the frame), moonlit clouds and twinkling stars
-  (one hash per pixel; none behind clouds, in the moon's glare or in the horizon haze). Day and night palettes
-  are blended before use, so the sky is evaluated once either way.
+  horizon haze and Snell's window from below; `nightSky.js`):
+  - *Stars:* one `Points` draw call of thousands of stars (1,200 / 3,200 / 6,500 by tier): most faint, a few
+    bright, white, blue-white, warm and the odd orange; a share crowd along the Milky Way. Each twinkles at its own
+    pace, more strongly near the horizon; they fade into the haze, behind clouds and in the moon's glare. Under them,
+    a faint hashed star dust. The layer is switched off by day and underwater.
+  - *Milky Way:* a soft band of star clouds with dark dust lanes, rising from a low, warmer core ahead-left and
+    arching over to the right.
+  - *Aurora:* enormous curtains to the north (right of the view): a bright, wandering lower edge that arcs in
+    perspective, green fading through teal to violet upwards, folds, fine shimmering rays and a soft airglow; it
+    brightens and dims over minutes, and the moon washes out the part near it. Its reflection on the sea is worked
+    out per vertex of the sea (soft, and cheap) and added through the Fresnel term.
+  - *Moon:* a sphere in a waxing gibbous phase with maria, highlands, a bright young crater, limb darkening and
+    earthshine, a soft aureole, and its silver path on the waves (the existing glitter).
+  - *Shooting stars:* now and then (every 6 - 20 s, sometimes two close together; never constant) a short bright
+    streak with a fading tail, only at night above the water (`uMeteorA` / `uMeteorB`).
+  - At night the clouds thin out and darken so the sky shows. Everything is multiplied by the eased night level,
+    so it fades in and out with the mode, and the day sky is exactly as before. Day and night palettes are blended
+    before use, so the sky is evaluated once either way, and the night layers are skipped entirely by day.
+  - *Cost* (720p, integrated laptop GPU): about +5 ms per frame at the surface at night on every tier (it was +8 to
+    +11 ms before the aurora's reflection moved to the vertices and its fine rays were limited per tier: `night` in
+    `config/quality.js`); nothing underwater, nothing by day.
 - **Night sea:** darker water body, dimmer foam, silver glitter instead of gold; from below, a faint Snell's
   window with no daylight rim; faint cool moonbeams; the dive lamp takes over closer to the surface; plankton
   sparkles just under the surface as well as in the deep. Two chapter texts that speak of sunlight have night
@@ -366,16 +441,62 @@ Uzbek is the default; English and Russian are one tap away in the HUD (the flag 
 
 ## Sound
 
-All sound is generated in the browser with the Web Audio API (`src/audio/`), so there are no audio files to load, host or lose.
+All sound is generated in the browser with the Web Audio API (`src/audio/`): original, synthesised, nothing
+licensed and no audio files to load, host or lose (recordings can still be added, see below).
 
-- **Music:** a slow generative ambient piece in D (four overlapping chords plus sparse bell notes) that never repeats exactly.
-- **Above the waves:** surf with a hiss that swells and falls, deep water, a little wind.
-- **Underwater:** everything is muffled by a low-pass filter that closes with depth, with a deep rumble and drone, random bubbles, faint creaks and, below 500 m, a distant whale-like song.
-- **Moments:** a click on START EXPEDITION, a rush of air as the descent begins, a splash plus a cluster of bubbles as the camera breaks the surface.
-- **Autoplay:** browsers refuse to play audio before a user gesture, so nothing is created until the first click, tap or key press (`bridge.js`). That gesture starts the music unless the visitor turned sound off earlier (the choice and volume are remembered). The sound button always shows the real state: lit only while sound is actually coming out, with a warning icon if audio cannot start.
-- **Controls:** the speaker button, the slider next to it (opens when sound is switched on, on hover, or from its own button; arrow keys work), and the `M` key. At 0 volume the button shows "off", and turning sound on from there restores a sensible volume.
-- **Background tabs** are silenced and the audio context suspended; iOS call interruptions resume on the next tap.
-- **Your own music:** drop `public/audio/music.mp3`. It fades in over the generated music. A missing file, a wrong path, a server that answers with an HTML page, a corrupt file or a timeout are each reported in the console as `[audio] ...` and the generated music keeps playing (`src/audio/files.js`).
-- **Debugging:** in development, `__oceanAudio.snapshot()` and `__oceanAudio.fileReport` in the console show the state and the file results.
+**Mixer** (`engine.js`): master volume (with the compressor and a limiter, so nothing clips) over three parts: the
+music, the world (ambience and effects, through an underwater low-pass that closes with depth) and the interface
+sounds. One shared reverb is fed after the volume controls, so a silenced part leaves no tail behind. The music is
+not muffled underwater (it is the score, not a sound in the water); it only darkens a little.
+
+**Music** (`music.js`, instruments in `instruments.js`): two generative pieces, composed rules rather than loops.
+- *Day:* D major, warm and open. Slow pad chords drift between related harmonies; a felt piano plays short
+  singing phrases (mostly stepwise, landing on the harmony, resting between them, sometimes answering the last
+  phrase); now and then a quiet harp arpeggio or a high string swell.
+- *Night:* D minor / Phrygian, deep and still. A low drone that never stops, dark slow chords, distant glassy notes
+  that echo away, and now and then something resonating far off in the dark.
+- *Depth:* both grow sparser, lower and darker as the camera goes deeper (a "mood" from 0 at the surface to 1 in
+  the hadal deep); at night the drone rises and the echoes lengthen.
+- *Day / night:* follows the HUD's mode (`appState.mode`). An equal-power crossfade of about 3 s: the two pieces
+  are never both at full level (at the midpoint each is at ~71%), a switch back mid-fade continues from where it
+  is, and only the audible piece schedules notes (the other stops once faded out). Nothing reloads or restarts.
+
+**Ambience** (`ambience.js`): above the waves, surf, the weight of the water and a little wind; underwater, one
+layer per depth zone, crossfaded slowly with wide overlaps:
+
+| Zone | Sound |
+| --- | --- |
+| sunlight, 0 - 200 m | water moving: soft, close swells |
+| twilight, 200 - 1,000 m | currents: a faint, slowly wandering band of sound, a low hum |
+| midnight, 1,000 - 4,000 m | a warm low hum and a dark, slow rumble |
+| abyssal, 4,000 - 6,000 m | isolation: a thin, very low draught of sound |
+| hadal, 6,000 m + | a still, low resonance under a slow, distant swell |
+
+The deep is quieter and emptier, not louder. At night the shallows are quieter and the twilight layer reaches up
+nearer the surface. Sparse events: a few soft bubbles (fewer in the deep and at night), a distant whale around the
+whale's depths, low pressure groans below 800 m, far-off booms below 4,000 m. **Moments:** a click on the buttons,
+a rush as the descent begins, a splash and bubbles as the camera breaks the surface.
+
+**Controls:** the speaker button mutes and unmutes (also the `M` key); the sound panel (its own button, hover, or
+opening by itself when sound is switched on; on narrow phones the speaker button opens it while sound is on) has
+master, music and effects sliders and a mute button. All of it is remembered (`ocean-explorer.sound.v2`; the old
+single volume is read once as the master). Sliders move the sound smoothly and are saved once they settle.
+
+**Autoplay and devices:** nothing is created until the first click, tap or key press (`bridge.js`); that gesture
+starts the sound unless the visitor had muted it. The speaker button shows the real state (lit only while sound
+is coming out, a warning icon if audio cannot start). Hidden tabs are silenced and the audio context suspended;
+it comes back when the tab is shown again, also after the back-forward cache; iOS interruptions resume on the
+next tap. Every note builds its own few nodes and disconnects them when it ends; after a stall the schedulers
+skip what was missed instead of playing a backlog at once; an error in one scheduled sound is reported once and
+never silences the rest.
+
+**Your own recordings:** put original or properly licensed files in `public/audio/` (e.g. `music-day.mp3`,
+`music-night.mp3`; MP3 or AAC at 96 - 128 kbps is plenty) and list them in `src/audio/files.js`. A recording
+replaces the generated piece of its mode and takes its place in the crossfade. By default nothing is requested
+(no 404s); a missing, wrong or undecodable file is reported in the console as `[audio] ...` and the generated
+music keeps playing.
+
+**Debugging:** in development, `__oceanAudio.snapshot()` and `__oceanAudio.fileReport` in the console show the
+state and the file results.
 
 `<ThreeScene>` takes a `scene-factory` function, so a new scene is a new module under `scenes/`.

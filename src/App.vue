@@ -5,7 +5,7 @@ import { appState } from '@/state/appState';
 import { QUALITY_ORDER } from '@/config/quality';
 import { CHAPTERS, STORY_LENGTH, chapterIndexById } from '@/config/story';
 import { t } from '@/i18n';
-import { prefersReducedMotion } from '@/utils/motion';
+import { prefersReducedMotion, saveCalmMotion } from '@/utils/motion';
 import { createOceanScene } from '@/scenes/ocean/index.js';
 import { createArrivalTimeline } from '@/core/expedition';
 import { useFullscreen } from '@/composables/useFullscreen';
@@ -20,6 +20,8 @@ import DepthIndicator from '@/components/DepthIndicator.vue';
 import StoryOverlay from '@/components/StoryOverlay.vue';
 import StoryProgress from '@/components/StoryProgress.vue';
 import EndScreen from '@/components/EndScreen.vue';
+import EncounterWarning from '@/components/EncounterWarning.vue';
+import MegalodonCard from '@/components/MegalodonCard.vue';
 
 const root = ref(null);
 const track = ref(null);
@@ -29,12 +31,18 @@ const overlay = ref(null);
 const endScreen = ref(null);
 const flash = ref(null);
 const veil = ref(null);
+const ui = ref(null);
+const impactDark = ref(null);
+const impactEdge = ref(null);
+const impactBlur = ref(null);
+let impactTl = null;
+let flicker = null;
 const showLoader = ref(true);
 let gsapCtx = null;
 let arrival = null;
 
 const { supported: fullscreenSupported, isFullscreen, toggle: toggleFullscreen } = useFullscreen();
-const { toggle: toggleSound, setVolume, cue } = useAudio();
+const { toggle: toggleSound, setVolume, setMusicVolume, setEffectsVolume, cue } = useAudio();
 const story = useStoryScroll();
 const { toggle: toggleMode } = useDayNight();
 
@@ -152,6 +160,57 @@ watch(() => [appState.fx.burstId, appState.fx.breachId], () => {
   });
 });
 
+// ---- The megalodon encounter (night mode only: the scene raises none of this by day) ----
+const calmNow = () => appState.calmMotion || prefersReducedMotion();
+// The chapter's words step back while the megalodon is close (they would sit over its face).
+const textDimmed = computed(() => appState.encounter.active && appState.encounter.phase !== 'shadow' && appState.encounter.phase !== 'leaving');
+function toggleCalm() {
+  appState.calmMotion = !appState.calmMotion;
+  saveCalmMotion(appState.calmMotion);
+}
+function closeCard() {
+  appState.encounter.card = false;
+}
+// The warning: the interface flickers for a moment, as if the signal faltered.
+watch(() => appState.encounter.warningId, (n, o) => {
+  if (!(n > o) || appState.mode !== 'night' || calmNow() || !ui.value) return;
+  gsapCtx.add(() => {
+    flicker?.kill();
+    flicker = gsap.to(ui.value, { keyframes: { opacity: [1, 0.5, 1, 0.72, 1, 0.86, 1] }, duration: 0.55, ease: 'none', clearProps: 'opacity' });
+  });
+});
+// The rush reaches the camera: a sudden darkening that lifts slowly; on capable devices a short blur of the whole
+// frame (motion) and a longer one at the edges. Less motion: only a gentle darkening.
+watch(() => appState.encounter.impactId, (n, o) => {
+  if (!(n > o) || appState.mode !== 'night' || !impactDark.value) return;
+  const calm = calmNow();
+  const rich = !calm && appState.quality !== 'low';
+  gsapCtx.add(() => {
+    impactTl?.kill();
+    impactTl = gsap.timeline();
+    impactTl.fromTo(impactDark.value, { autoAlpha: 0 }, { autoAlpha: calm ? 0.4 : 0.82, duration: calm ? 0.3 : 0.07, ease: 'power2.out' }, 0)
+      .to(impactDark.value, { autoAlpha: 0, duration: calm ? 1.2 : 1.6, ease: 'power2.inOut' }, calm ? 0.4 : 0.22);
+    if (rich) {
+      impactTl.fromTo(impactBlur.value, { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.05, ease: 'none' }, 0)
+        .to(impactBlur.value, { autoAlpha: 0, duration: 0.32, ease: 'power1.out' }, 0.08)
+        .fromTo(impactEdge.value, { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.06, ease: 'power2.out' }, 0)
+        .to(impactEdge.value, { autoAlpha: 0, duration: 1.0, ease: 'power2.out' }, 0.2);
+    }
+  });
+});
+// Over, or called off (day mode, scrolled away): nothing of it stays on screen.
+watch(() => appState.encounter.active, (on) => {
+  if (on) return;
+  impactTl?.kill();
+  impactTl = null;
+  flicker?.kill();
+  flicker = null;
+  if (ui.value) gsap.set(ui.value, { clearProps: 'opacity' });
+  const layers = [impactDark.value, impactEdge.value, impactBlur.value].filter(Boolean);
+  if (layers.length) gsap.to(layers, { autoAlpha: 0, duration: 0.35, overwrite: true });
+});
+watch(() => appState.mode, (mode) => { if (mode !== 'night') closeCard(); });
+
 onBeforeUnmount(() => {
   arrival?.kill();
   gsapCtx?.revert();
@@ -172,7 +231,7 @@ onBeforeUnmount(() => {
 
     <div class="vignette" aria-hidden="true"></div>
 
-    <div class="ui">
+    <div ref="ui" class="ui">
       <div class="brand" data-hud>
         <span class="brand__name">{{ t('app.name') }}</span>
         <span class="brand__chapter" aria-live="polite">
@@ -188,24 +247,35 @@ onBeforeUnmount(() => {
         :sound-on="appState.soundOn"
         :sound-error="appState.audio.error"
         :volume="appState.audio.volume"
+        :music-volume="appState.audio.music"
+        :effects-volume="appState.audio.effects"
         :quality="appState.quality"
         :mode="appState.mode"
         @toggle-fullscreen="toggleFullscreen"
         @toggle-sound="toggleSound"
         @set-volume="setVolume"
+        @set-music="setMusicVolume"
+        @set-effects="setEffectsVolume"
         @cycle-quality="cycleQuality"
         @toggle-mode="toggleMode"
       />
       <DepthIndicator ref="gauge" class="gauge" :depth="appState.meters" />
-      <StoryOverlay ref="overlay" />
+      <StoryOverlay ref="overlay" class="story-text" :class="{ 'is-dimmed': textDimmed }" />
       <EndScreen ref="endScreen" @replay="replayExpedition" @explore="exploreAgain" />
       <StoryProgress data-hud :progress="appState.story.progress" :active="appState.story.chapter" @navigate="story.goTo" />
 
       <IntroScreen ref="intro" @start="startExpedition" />
+
+      <EncounterWarning :warning="appState.encounter.warning" :hint="appState.encounter.hint && !appState.encounter.card" :calm="appState.calmMotion" @toggle-calm="toggleCalm" />
+      <MegalodonCard :open="appState.encounter.card" :calm="appState.calmMotion" @close="closeCard" @toggle-calm="toggleCalm" />
     </div>
 
     <!-- Brief veil of light as the camera breaks the surface. -->
     <div ref="flash" class="flash" aria-hidden="true"></div>
+    <!-- The megalodon's impact (night only): a darkening, a short blur of the frame, a longer one at the edges. -->
+    <div ref="impactBlur" class="impact impact--blur" aria-hidden="true"></div>
+    <div ref="impactEdge" class="impact impact--edge" aria-hidden="true"></div>
+    <div ref="impactDark" class="impact impact--dark" aria-hidden="true"></div>
     <!-- Fade to the deep for long jumps between chapters. -->
     <div ref="veil" class="veil" aria-hidden="true"></div>
 
@@ -256,6 +326,18 @@ onBeforeUnmount(() => {
   opacity: 0;
   pointer-events: none;
   background: radial-gradient(100% 80% at 50% 55%, rgba(190, 240, 250, 0.9), rgba(70, 170, 200, 0.75));
+}
+/* Hidden (visibility too, so the blurs cost nothing) until an impact; GSAP's autoAlpha shows them. */
+.story-text { transition: opacity 0.9s ease; }
+.story-text.is-dimmed { opacity: 0.15; }
+.impact { position: absolute; inset: 0; z-index: 5; pointer-events: none; opacity: 0; visibility: hidden; }
+.impact--dark { background: radial-gradient(95% 85% at 50% 50%, rgba(0, 3, 7, 0.6), rgba(0, 1, 3, 0.96)); }
+.impact--blur { -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); }
+.impact--edge {
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  -webkit-mask-image: radial-gradient(72% 66% at 50% 50%, transparent 42%, #000 100%);
+  mask-image: radial-gradient(72% 66% at 50% 50%, transparent 42%, #000 100%);
 }
 .veil {
   position: absolute;

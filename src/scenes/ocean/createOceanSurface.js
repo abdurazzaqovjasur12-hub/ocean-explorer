@@ -54,6 +54,9 @@ export function createOceanSurface(scene, atmosphere, settings) {
     material.defines.WAVE_COUNT = o.waves;
     material.defines.DETAIL_OCTAVES = o.detail;
     material.defines.REFLECT_CLOUD_OCT = o.reflectClouds;
+    material.defines.AURORA_LAYERS = next.night.reflectAurora; // the aurora in the reflections (per vertex)
+    material.defines.AURORA_RAY_LAYERS = 1; // only Snell's window from below draws it in full
+    material.defines.MILKY_OCT = 2; // only Snell's window from below shows it
     material.needsUpdate = true;
   }
   apply(settings);
