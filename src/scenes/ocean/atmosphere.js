@@ -7,6 +7,11 @@ import { sunlightAt } from './depthPalette';
 // Where the sun sits relative to the camera's forward direction (radians). Slightly left, low.
 const BASE_AZIMUTH = -0.28;
 const BASE_ELEVATION = 0.17;
+// The moon: a little higher and further right, so its silver path crosses the frame.
+const MOON_AZIMUTH = -0.12;
+const MOON_ELEVATION = 0.3;
+const SUN_COLOR = [1.0, 0.72, 0.46];
+const MOON_COLOR = [0.62, 0.7, 0.88];
 
 /**
  * Where the sun appears from underwater. Light bends towards the vertical when it enters the water
@@ -39,6 +44,7 @@ export function createAtmosphere() {
     uRayDir: { value: new THREE.Vector3(0, 1, 0) }, // towards the sun as seen from underwater (bent by the surface)
     uDepthLight: { value: 1 }, // how much sunlight is left at the camera's depth
     uMeters: { value: 0 }, // camera depth in metres
+    uNight: { value: 0 }, // 0 day .. 1 moonlit night
   };
   const speed = prefersReducedMotion() ? 0.45 : 1;
   const rgb = { r: 0, g: 0, b: 0 };
@@ -46,15 +52,17 @@ export function createAtmosphere() {
   return {
     uniforms,
     /** pointer: { x, y } in -1..1 (smoothed) and energy 0..1 (how much the mouse has been moving). */
-    update({ time, camera, pointer, waterColor, fogDensity, meters = 0 }) {
+    update({ time, camera, pointer, waterColor, fogDensity, meters = 0, night = 0 }) {
+      uniforms.uNight.value = night;
       uniforms.uTime.value = time * speed;
 
       // The pointer nudges the sun a few degrees and warms or cools the glow around it.
-      const az = BASE_AZIMUTH + pointer.x * 0.06;
-      const el = BASE_ELEVATION - pointer.y * 0.018;
+      const az = BASE_AZIMUTH + (MOON_AZIMUTH - BASE_AZIMUTH) * night + pointer.x * 0.06;
+      const el = BASE_ELEVATION + (MOON_ELEVATION - BASE_ELEVATION) * night - pointer.y * 0.018;
       const ce = Math.cos(el);
       uniforms.uSunDir.value.set(ce * Math.sin(az), Math.sin(el), -ce * Math.cos(az));
-      uniforms.uGlow.value = 1 - pointer.y * 0.18 + pointer.energy * 0.12;
+      uniforms.uGlow.value = (1 - pointer.y * 0.18 + pointer.energy * 0.12) * (1 - 0.35 * night);
+      uniforms.uSunColor.value.set(...SUN_COLOR.map((d, i) => d + (MOON_COLOR[i] - d) * night)); // glitter: gold -> silver
       uniforms.uGust.value = pointer.energy;
 
       waterColor.getRGB(rgb, THREE.SRGBColorSpace);

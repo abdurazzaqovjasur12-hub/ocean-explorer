@@ -1,9 +1,15 @@
 <script setup>
 import { CHAPTERS } from '@/config/story';
+import { t } from '@/i18n';
+import { appState } from '@/state/appState';
+
+// At night, chapters whose words describe daylight use their night text instead.
+const textOf = (c) => (c.nightText && appState.mode === 'night' ? t(`chapters.${c.id}.textNight`) : t(`chapters.${c.id}.text`));
 
 // The text of every chapter after the surface (the intro screen is the surface's text). All of it is in
 // the DOM from the start; the story timeline reveals and hides each block as the scroll reaches it.
-const beats = CHAPTERS.filter((c) => c.title);
+// Only the words change with the language: the elements (and so the timeline driving them) stay the same.
+const beats = CHAPTERS.filter((c) => c.beat);
 </script>
 
 <template>
@@ -13,11 +19,11 @@ const beats = CHAPTERS.filter((c) => c.title);
       :key="c.id"
       class="beat"
       :data-beat="c.id"
-      :aria-label="c.label"
+      :aria-label="t(`chapters.${c.id}.label`)"
     >
-      <p class="beat__kicker" data-line>{{ c.kicker }}</p>
-      <h2 class="beat__title" data-line data-title>{{ c.title }}</h2>
-      <p class="beat__text" data-line>{{ c.text }}</p>
+      <p class="beat__kicker" data-line>{{ t(`chapters.${c.id}.kicker`) }}</p>
+      <h2 class="beat__title" data-line data-title>{{ t(`chapters.${c.id}.title`) }}</h2>
+      <p class="beat__text" data-line>{{ textOf(c) }}</p>
     </article>
   </div>
 </template>

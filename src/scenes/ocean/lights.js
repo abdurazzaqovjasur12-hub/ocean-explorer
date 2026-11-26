@@ -1,5 +1,7 @@
 import * as THREE from 'three';
-import { sunlightAt, absorptionColor } from './depthPalette';
+import { sunlightAt, absorptionColor, nightAt } from './depthPalette';
+
+const MOON_TINT = new THREE.Color(0.6, 0.72, 1.0);
 
 export function createLights(scene) {
   const hemi = new THREE.HemisphereLight(0x9fe6f5, 0x06202e, 1);
@@ -13,12 +15,20 @@ export function createLights(scene) {
   const absorb = new THREE.Color();
 
   return {
+    hemi,
+    sun,
+    lamp,
     /** `meters`: how far below the surface the camera is. Light dims and loses its red, then green, with depth. */
     update(meters, camPos) {
       const light = sunlightAt(meters);
       absorptionColor(meters, absorb);
       hemi.color.copy(hemiBase).multiply(absorb);
       sun.color.copy(sunBase).multiply(absorb);
+      const n = nightAt(meters);
+      if (n > 0) {
+        hemi.color.lerp(MOON_TINT, n * 0.5);
+        sun.color.lerp(MOON_TINT, n * 0.7);
+      }
       hemi.intensity = 0.12 + 0.9 * light;
       sun.intensity = 2.2 * light;
       sun.position.set(6, camPos.y + 30, 4);

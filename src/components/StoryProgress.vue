@@ -1,5 +1,6 @@
 <script setup>
 import { CHAPTERS, CHAPTER_STARTS, STORY_LENGTH } from '@/config/story';
+import { t } from '@/i18n';
 
 defineProps({
   progress: { type: Number, default: 0 }, // 0..1 along the whole story
@@ -13,11 +14,11 @@ const pad = (n) => String(n).padStart(2, '0');
 </script>
 
 <template>
-  <nav class="progress" :class="{ 'is-surface': active === 0 }" :style="{ '--p': progress }" aria-label="Expedition chapters" data-ui>
+  <nav class="progress" :class="{ 'is-surface': active === 0 }" :style="{ '--p': progress }" :aria-label="t('progress.aria')" data-ui>
     <div
       class="progress__track"
       role="progressbar"
-      aria-label="Expedition progress"
+      :aria-label="t('progress.bar')"
       aria-valuemin="0"
       aria-valuemax="100"
       :aria-valuenow="Math.round(progress * 100)"
@@ -31,11 +32,11 @@ const pad = (n) => String(n).padStart(2, '0');
           class="progress__mark"
           :class="{ 'is-active': m.index === active, 'is-past': m.index < active }"
           :aria-current="m.index === active ? 'step' : undefined"
-          :aria-label="`Chapter ${m.index + 1}: ${m.label}`"
+          :aria-label="t('progress.chapter', { n: m.index + 1, label: t(`chapters.${m.id}.label`) })"
           @click="$emit('navigate', m.index)"
         >
           <span class="progress__dot" aria-hidden="true"></span>
-          <span class="progress__label" aria-hidden="true"><small>{{ pad(m.index + 1) }}</small> {{ m.label }}</span>
+          <span class="progress__label" aria-hidden="true"><small>{{ pad(m.index + 1) }}</small> {{ t(`chapters.${m.id}.label`) }}</span>
         </button>
       </li>
     </ol>

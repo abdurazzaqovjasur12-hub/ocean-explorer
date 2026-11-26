@@ -8,6 +8,7 @@ attribute vec3 aBase;
 attribute vec4 aParams; // width, length, intensity, seed
 uniform vec3 uDown;     // direction the light travels (unit, pointing down)
 uniform float uTime;
+uniform vec3 uLightColor;
 varying vec2 vUv;
 varying vec4 vParams;
 varying vec3 vWorld;
@@ -39,6 +40,7 @@ varying vec2 vUv;
 varying vec4 vParams;
 varying vec3 vWorld;
 uniform float uTime;
+uniform vec3 uLightColor;
 uniform vec3 uDown;
 uniform float uStrength;
 
@@ -68,7 +70,7 @@ void main() {
 
   // small on purpose: additive light lands after tone mapping, so a little goes a long way
   float I = core * fadeIn * fadeOut * shimmer * breathe * vParams.z * (0.7 + 0.6 * towardLight) * near * uStrength * 0.12;
-  gl_FragColor = vec4(vec3(1.0, 0.96, 0.88) * absorb * I, 1.0);
+  gl_FragColor = vec4(uLightColor * absorb * I, 1.0);
   #include <tonemapping_fragment>
   #include <colorspace_fragment>
 }

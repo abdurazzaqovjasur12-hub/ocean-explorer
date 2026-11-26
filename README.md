@@ -269,6 +269,64 @@ Tested on desktop (1440 x 900), laptop (1280 x 720 at 1.25x), Android and iPhone
   every chapter are compiled during loading, so no chapter stutters the first time it appears.
 - **Bloom** needs half-float render targets; on GPUs that can't draw into them it is simply off.
 
+## Day and night
+
+The sun or moon button in the HUD switches between the golden-hour day and a moonlit night. It is one scene
+for both: no scene, shader set or timeline is duplicated.
+
+- **One number:** `appState.env.night` (0 day .. 1 night), eased by GSAP over 2.6 s when the mode changes
+  (`composables/useDayNight.js`). Each frame the scene hands it to `depthPalette.js` (`setNightLevel`), and
+  everything that depends on daylight reads it from there: water colour and fog, sunlight (moonlight is about a
+  seventh of it), the lights, the beams, the particles. `nightAt(meters)` fades the night out with depth: below
+  ~2,500 m day and night are the same, as they are in the real ocean. Shaders get it as `uNight` through the
+  shared atmosphere uniforms.
+- **Night sky** (`skyChunk` in `shaders/chunks.js`, shared by the sky dome, the sea's reflections, the
+  horizon haze and Snell's window from below): a deep blue-black gradient, a cool moon (larger and dimmer than
+  the sun, higher and to the right, so its silver path crosses the frame), moonlit clouds and twinkling stars
+  (one hash per pixel; none behind clouds, in the moon's glare or in the horizon haze). Day and night palettes
+  are blended before use, so the sky is evaluated once either way.
+- **Night sea:** darker water body, dimmer foam, silver glitter instead of gold; from below, a faint Snell's
+  window with no daylight rim; faint cool moonbeams; the dive lamp takes over closer to the surface; plankton
+  sparkles just under the surface as well as in the deep. Two chapter texts that speak of sunlight have night
+  versions (`chapters.descent.textNight`, `chapters.shallows.textNight`), and the intro's conditions read
+  "moonlit night". The edges of the frame close in a little more.
+- **Switching** changes nothing else: the scroll position, the story timeline and any glide in progress, the
+  camera, sound, quality and language all carry on. The choice is remembered (`ocean-explorer.mode`); day is
+  the default.
+- **Phones:** up to 400 px wide, the fullscreen button gives way so that day / night and the language fit beside
+  the brand (phone browsers hide their own bars while scrolling; iPhones never offer fullscreen).
+
+## Languages (UZ / EN / RU)
+
+Uzbek is the default; English and Russian are one tap away in the HUD (the flag button, top right).
+
+- **One system** (`src/i18n/index.js`): every piece of interface text is a key in `src/i18n/locales/uz.json`,
+  `en.json` and `ru.json` (same keys in all three), read with `t('chapters.whale.title')`, with `{name}`
+  placeholders (`t('progress.chapter', { n, label })`). The current language is a Vue ref, so everything on screen
+  re-renders the moment it changes. Missing keys fall back to English and warn in development.
+- **What it covers:** the intro (title, subtitle, button, expedition details, scroll cue), every chapter's label,
+  kicker, title and text, the chapter rail and label, the depth gauge (zone names, unit, numbers grouped the local
+  way: 10,900 / 10 900), the HUD (quality names, fullscreen, sound and volume labels), the loading screen's steps and
+  error messages, the end screen and its buttons, all accessible labels, the page title, description and
+  `<html lang>`. Config files hold no words: chapters (`config/story.js`), zones (`config/zones.js`) and
+  quality tiers (`config/quality.js`) are referenced by id. Scientific names (Challenger Deep in English, its
+  usual Uzbek and Russian names elsewhere) are localised as people say them; units and numbers follow each language.
+- **Switching** changes words only: no reload, no new 3D scene, and the scroll position, chapter, camera,
+  animations, quality and sound all carry on. Text that animates letter by letter or word by word (the intro
+  subtitle, the end title) keeps one set of elements per language, all animated together, and shows the current
+  one, so a switch never produces letters that missed their animation.
+- **Remembered** in localStorage (`ocean-explorer.locale`); a first visit gets Uzbek.
+- **Selector** (`components/LanguageSwitcher.vue`): glass pill with a CSS-drawn flag (emoji flags don't render on
+  Windows) and the code; a menu of the three languages in their own names. Touch-sized (44 px rows), works by
+  keyboard (Enter or arrows to open, arrows to move, Enter to choose, Escape to close), closes on an outside tap.
+  On phones it shows just the flag, and the separate volume button gives way to it (the volume slider still
+  opens when sound is switched on).
+- **Long translations:** the intro and end titles scale to the longest word, the brand name wraps on narrow
+  phones, and the chapter label wraps. Checked at 320 px, 390 px, phone landscape and desktop in all three
+  languages: no overflow and no overlap.
+- **Adding a language:** add `xx.json` with the same keys, list it in `LOCALES` and `NUMBER_LOCALE` in
+  `src/i18n/index.js`, and add its flag to `LanguageSwitcher.vue`.
+
 ## Sound
 
 All sound is generated in the browser with the Web Audio API (`src/audio/`), so there are no audio files to load, host or lose.

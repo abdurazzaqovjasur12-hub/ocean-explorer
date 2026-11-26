@@ -16,12 +16,13 @@ export const SURFACE_BLEND = 120;
 export const cameraYAtDepth = (depth) =>
   lerp(CAMERA_SURFACE_Y, depthToY(depth), smoothstep(0, SURFACE_BLEND, depth));
 
+/** Depth zones. Their names are translations: `zones.<id>` in src/i18n/locales. */
 export const ZONES = [
-  { id: 'sunlight', name: 'Sunlight zone', short: 'Sunlight', from: 0, to: 200 },
-  { id: 'twilight', name: 'Twilight zone', short: 'Twilight', from: 200, to: 1000 },
-  { id: 'midnight', name: 'Midnight zone', short: 'Midnight', from: 1000, to: 4000 },
-  { id: 'abyssal', name: 'Abyssal zone', short: 'Abyssal', from: 4000, to: 6000 },
-  { id: 'hadal', name: 'Hadal zone', short: 'Hadal', from: 6000, to: MAX_DEPTH },
+  { id: 'sunlight', from: 0, to: 200 },
+  { id: 'twilight', from: 200, to: 1000 },
+  { id: 'midnight', from: 1000, to: 4000 },
+  { id: 'abyssal', from: 4000, to: 6000 },
+  { id: 'hadal', from: 6000, to: MAX_DEPTH },
 ];
 
 export function zoneIndexAt(depth) {
@@ -43,5 +44,3 @@ export function gaugePosition(depth) {
   return (i + t) / ZONES.length;
 }
 
-export const formatRange = (zone) =>
-  `${zone.from.toLocaleString('en-US')}–${zone.to.toLocaleString('en-US')} m`;

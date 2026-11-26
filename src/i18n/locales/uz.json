@@ -1,0 +1,152 @@
+{
+  "meta": {
+    "title": "Okean tadqiqotchisi",
+    "description": "Okean tadqiqotchisi: suv yuzasidan eng chuqur okean botig‘igacha sho‘ng‘ing."
+  },
+  "app": {
+    "name": "Okean tadqiqotchisi"
+  },
+  "languages": {
+    "uz": "O‘zbekcha",
+    "en": "English",
+    "ru": "Русский"
+  },
+  "intro": {
+    "subtitle": "Noma’lumlikka sho‘ng‘ing",
+    "start": "Ekspeditsiyani boshlash",
+    "facts": {
+      "expedition": "Ekspeditsiya",
+      "expeditionValue": "01 · Chellenjer chuqurligi",
+      "position": "Koordinatalar",
+      "positionValue": "11°22′ sh. k. · 142°35′ sh. u.",
+      "targetDepth": "Maqsadli chuqurlik",
+      "targetDepthValue": "≈ 11 000 m",
+      "conditions": "Sharoit",
+      "conditionsValue": "Sokin dengiz · Shafaq payti",
+      "conditionsValueNight": "Sokin dengiz · Oydin tun"
+    }
+  },
+  "scroll": {
+    "mouse": "Aylantiring",
+    "touch": "Yuqoriga suring",
+    "aria": "Ekspeditsiyani boshlash"
+  },
+  "loading": {
+    "aria": "Okean tadqiqotchisi yuklanmoqda",
+    "preparing": "Sho‘ng‘ishga tayyorlanmoqda",
+    "renderer": "Grafika ishga tushirilmoqda",
+    "water": "Okean suvga to‘ldirilmoqda",
+    "sky": "Osmon chizilmoqda",
+    "swell": "To‘lqinlar ko‘tarilmoqda",
+    "light": "Yorug‘lik kiritilmoqda",
+    "seabed": "Dengiz tubi shakllantirilmoqda",
+    "reef": "Rif o‘stirilmoqda",
+    "snow": "Dengiz qori sepilmoqda",
+    "bubbles": "Pufakchalar yig‘ilmoqda",
+    "deep": "Chuqurlik uyg‘otilmoqda",
+    "shaders": "Sheyderlar tayyorlanmoqda",
+    "ready": "Tayyor",
+    "errorTitle": "Sho‘ng‘ishni boshlab bo‘lmadi",
+    "errorWebgl": "Brauzeringiz WebGL’ni ishga tushira olmadi. Brauzerni yangilang yoki apparat tezlashtirishni yoqing, so‘ng sahifani qayta yuklang.",
+    "errorScene": "Sahnani qurishda xatolik yuz berdi. Qayta urinib ko‘rish uchun sahifani qayta yuklang."
+  },
+  "hud": {
+    "quality": {
+      "low": "Past",
+      "medium": "O‘rta",
+      "high": "Yuqori",
+      "aria": "Grafika sifati: {tier}. O‘zgartirish uchun bosing"
+    },
+    "fullscreen": {
+      "enter": "To‘liq ekran rejimi",
+      "exit": "To‘liq ekran rejimidan chiqish"
+    },
+    "sound": {
+      "on": "Ovozni yoqish",
+      "off": "Ovozni o‘chirish",
+      "unavailable": "Ovoz mavjud emas"
+    },
+    "volume": "Ovoz balandligi",
+    "language": {
+      "button": "Til: {name}. Tilni tanlang",
+      "menu": "Tilni tanlang"
+    },
+    "mode": {
+      "toNight": "Tungi rejimga o‘tish",
+      "toDay": "Kunduzgi rejimga o‘tish"
+    }
+  },
+  "depth": {
+    "aria": "Chuqurlik o‘lchagichi",
+    "unit": "m",
+    "valueText": "{depth} metr, {zone}"
+  },
+  "zones": {
+    "sunlight": "Quyosh nuri zonasi",
+    "twilight": "G‘ira-shira zona",
+    "midnight": "Yarim tun zonasi",
+    "abyssal": "Abissal zona",
+    "hadal": "Hadal zona"
+  },
+  "progress": {
+    "aria": "Ekspeditsiya bo‘limlari",
+    "bar": "Ekspeditsiya jarayoni",
+    "chapter": "{n}-bo‘lim: {label}"
+  },
+  "chapters": {
+    "surface": {
+      "label": "Okean yuzasi"
+    },
+    "descent": {
+      "label": "Sho‘ng‘ish",
+      "kicker": "0 – 150 m",
+      "title": "Suv yuzasini yorib o‘tib",
+      "text": "Osmon tepada tebranayotgan yorug‘likka aylanadi. Har bir metrda dengiz quyosh nurini biroz ko‘proq yutadi.",
+      "textNight": "Tungi osmon tepada kumushrang to‘lqinga aylanadi. Pastda esa suv allaqachon qorong‘i."
+    },
+    "shallows": {
+      "label": "Sayoz suv",
+      "kicker": "Quyosh nuri zonasi · 300 m",
+      "title": "Nur ustunlari",
+      "text": "Quyosh nurlari moviy suv orasidan qiya tushadi. Qizil rang allaqachon yo‘qolgan: 200 metrdan pastga faqat ko‘k nur yetib keladi.",
+      "textNight": "Oyning xira nurlari to‘q moviy suv orasidan qiya tushadi. Siz o‘tganda plankton u yer-bu yerda chaqnab ketadi."
+    },
+    "glow": {
+      "label": "Bioluminessensiya",
+      "kicker": "G‘ira-shira zona · 900 m",
+      "title": "Tirik nur",
+      "text": "Zulmat ichida meduzalar o‘z nuri bilan miltillaydi. Bu yerdagi jonzotlarning ko‘pchiligi nurni o‘zi hosil qiladi: ov qilish, yashirinish va bir-birini topish uchun."
+    },
+    "whale": {
+      "label": "Kit bilan uchrashuv",
+      "kicker": "Yarim tun zonasi · 1 800 m",
+      "title": "Yonimizdan o‘tgan gigant",
+      "text": "Kashalot to‘liq zulmatda ov qiladi va kalmarlarni faqat tovush orqali topadi. Suv yuzasida olgan bir nafasi unga bir soatdan ko‘proq yetadi."
+    },
+    "vents": {
+      "label": "Gidrotermal manbalar",
+      "kicker": "Okean o‘rta tizmasi · 3 000 m",
+      "title": "Qora mo‘rilar",
+      "text": "Harorati 350 °C dan yuqori, minerallarga to‘yingan suv dengiz tubidan otilib chiqadi. Bu yerda hayot quyosh nurisiz ham gullab-yashnaydi."
+    },
+    "abyss": {
+      "label": "Tubsizlik",
+      "kicker": "Chellenjer chuqurligi · 10 900 m",
+      "title": "Tubsizlik",
+      "text": "Yer yuzidagi eng chuqur suv: bu yerda bosim suv yuzasidagidan ming martadan ham ko‘proq. Nur chegarasida allaqanday ulkan jonzot harakatlanadi va g‘oyib bo‘ladi."
+    },
+    "return": {
+      "label": "Yuzaga qaytish",
+      "kicker": "Ko‘tarilish",
+      "title": "Yana yorug‘likka",
+      "text": "Tepangizda o‘n bir kilometr suv bor va har bir metr avvalgisidan biroz yorug‘roq."
+    }
+  },
+  "end": {
+    "kicker": "Ekspeditsiya yakunlandi · 10 900 m va ortga",
+    "title": "Okean hali ham o‘rganilmagan",
+    "note": "Okeanning sakson foizidan ko‘prog‘i hali xaritaga tushirilmagan, kuzatilmagan va o‘rganilmagan.",
+    "replay": "Ekspeditsiyani takrorlash",
+    "explore": "Yana kashf etish"
+  }
+}

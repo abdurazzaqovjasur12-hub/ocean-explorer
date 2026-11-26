@@ -47,6 +47,21 @@ float clamp01(float x) { return clamp(x, 0.0, 1.0); }
  * Used for the sky dome, for reflections on the water and for the haze at the horizon.
  */
 export const skyChunk = /* glsl */ `
+uniform float uNight; // 0 day .. 1 moonlit night (eased by GSAP between the modes)
+
+// Stars: one in ~70 cells of a grid on the sky, each its own size and twinkle. One hash per pixel.
+float starField(vec3 dir, float t) {
+  vec3 p = dir * 120.0;
+  vec3 cell = floor(p);
+  float h = fract(sin(dot(cell, vec3(12.9898, 78.233, 37.719))) * 43758.5453);
+  if (h < 0.986) return 0.0;
+  vec3 off = vec3(fract(h * 13.1), fract(h * 71.7), fract(h * 37.3)) - 0.5;
+  float d = length(fract(p) - 0.5 - off * 0.6);
+  float size = 0.11 + 0.12 * fract(h * 91.3);
+  float twinkle = 0.6 + 0.4 * sin(t * (1.3 + 2.8 * fract(h * 7.7)) + h * 40.0);
+  return smoothstep(size, 0.0, d) * twinkle * (0.7 + 3.0 * pow(fract(h * 5.3), 3.0));
+}
+
 float cloudDensity(vec3 dir, float t, vec2 wind, int octaves) {
   float h = dir.y;
   if (h <= 0.0) return 0.0;
@@ -66,32 +81,43 @@ float cloudDensity(vec3 dir, float t, vec2 wind, int octaves) {
   return c * smoothstep(0.0, 0.22, h);
 }
 
+// Day: golden-hour sky with a low sun. Night (uNight): deep blue-black, a cool moon with a soft halo,
+// moonlit clouds and twinkling stars. The palettes are blended before use, so it is one evaluation either way.
 vec3 skyColor(vec3 dir, vec3 sunDir, float t, vec2 wind, int cloudOct, float sunDisc, float glow) {
+  float n = uNight;
   float h = max(dir.y, 0.0);
   float sd = max(dot(dir, sunDir), 0.0);
   float a = pow(h, 0.45);
 
-  vec3 horizon = vec3(0.36, 0.48, 0.62);
-  vec3 mid     = vec3(0.06, 0.17, 0.46);
-  vec3 top     = vec3(0.012, 0.055, 0.28);
+  vec3 horizon = mix(vec3(0.36, 0.48, 0.62), vec3(0.030, 0.046, 0.088), n);
+  vec3 mid     = mix(vec3(0.06, 0.17, 0.46), vec3(0.008, 0.019, 0.052), n);
+  vec3 top     = mix(vec3(0.012, 0.055, 0.28), vec3(0.002, 0.005, 0.021), n);
   vec3 col = mix(horizon, mid, smoothstep(0.0, 0.55, a));
   col = mix(col, top, smoothstep(0.45, 1.0, a));
 
   float lowBand = 1.0 - smoothstep(0.0, 0.6, a);
   float haloWide = pow(sd, 4.0);
   float haloTight = pow(sd, 24.0);
-  vec3 warm = vec3(1.0, 0.45, 0.16);
-  col += warm * (pow(sd, 6.0) * 0.45 * (0.12 + 0.88 * lowBand * lowBand) + haloTight * 1.3) * glow;
-  col = mix(col, vec3(0.92, 0.56, 0.30), haloWide * lowBand * 0.5);
+  vec3 warm = mix(vec3(1.0, 0.45, 0.16), vec3(0.32, 0.38, 0.52), n); // warm sun -> cool moon
+  col += warm * (pow(sd, 6.0) * 0.45 * (0.12 + 0.88 * lowBand * lowBand) * mix(1.0, 0.45, n) + haloTight * mix(1.3, 0.9, n)) * glow;
+  col = mix(col, mix(vec3(0.92, 0.56, 0.30), vec3(0.10, 0.12, 0.19), n), haloWide * lowBand * mix(0.5, 0.35, n));
 
   float c = 0.0;
   if (cloudOct > 0) c = cloudDensity(dir, t, wind, cloudOct);
-  vec3 cloudCol = mix(vec3(0.60, 0.68, 0.80), vec3(1.0, 0.66, 0.42), clamp01(pow(sd, 3.0) * 1.2));
-  cloudCol *= 0.60 + 1.3 * pow(sd, 8.0) * glow;
+  vec3 cloudDay = mix(vec3(0.60, 0.68, 0.80), vec3(1.0, 0.66, 0.42), clamp01(pow(sd, 3.0) * 1.2));
+  vec3 cloudNight = mix(vec3(0.030, 0.040, 0.066), vec3(0.40, 0.45, 0.56), clamp01(pow(sd, 3.0) * 1.4));
+  vec3 cloudCol = mix(cloudDay, cloudNight, n) * (0.60 + 1.3 * pow(sd, 8.0) * glow);
   col = mix(col, cloudCol, c * 0.6);
 
-  float disc = smoothstep(0.99978, 0.99993, sd) * sunDisc;
-  col += vec3(1.0, 0.75, 0.45) * 40.0 * disc * (1.0 - c * 0.9);
+  // Stars where there is open sky: not behind clouds, not in the moon's glare, not in the horizon haze.
+  if (sunDisc > 0.5 && n > 0.001) {
+    float stars = starField(dir, t) * smoothstep(0.03, 0.3, h) * (1.0 - c) * (1.0 - smoothstep(0.85, 0.99, sd));
+    col += vec3(0.82, 0.88, 1.0) * stars * n;
+  }
+
+  // The sun's disc, or the moon's: a little larger, much less bright, cool white.
+  float disc = smoothstep(mix(0.99978, 0.99962, n), mix(0.99993, 0.99980, n), sd) * sunDisc;
+  col += mix(vec3(1.0, 0.75, 0.45) * 40.0, vec3(0.88, 0.92, 1.0) * 9.0, n) * disc * (1.0 - c * 0.9);
   return col;
 }
 `;

@@ -1,5 +1,6 @@
 <script setup>
-import { onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { LOCALES, locale, t, tFor } from '@/i18n';
 import gsap from '@/core/gsap';
 import { appState } from '@/state/appState';
 import { buildIntroIn, hideIntroUi } from '@/core/introTimelines';
@@ -10,6 +11,16 @@ const emit = defineEmits(['start']);
 
 const root = ref(null);
 let ctx = null;
+
+// The title scales down for long translations (it must fit on one line, or one word per line on phones).
+const titleWords = computed(() => t('app.name').split(' '));
+const titleFit = computed(() => ({
+  '--title-chars': t('app.name').length,
+  '--word-chars': Math.max(...titleWords.value.map((w) => w.length)),
+}));
+// The subtitle's words animate one by one, so each language keeps its own set of word elements: switching
+// language only shows another set (already in its animated state), it never creates unanimated elements.
+const subtitleWords = (lang) => tFor(lang, 'intro.subtitle').split(' ');
 let interactions = null;
 
 onMounted(() => {
@@ -42,30 +53,29 @@ defineExpose({
 </script>
 
 <template>
-  <section ref="root" class="intro" aria-label="Ocean Explorer">
+  <section ref="root" class="intro" :aria-label="t('app.name')">
     <div class="intro__scrim" data-part="scrim" aria-hidden="true"></div>
 
     <div class="intro__content">
       <div class="layer" data-depth="1">
-        <h1 class="intro__title" data-part="title">
-          <span class="intro__word">OCEAN</span> <span class="intro__word">EXPLORER</span>
+        <h1 class="intro__title" data-part="title" :style="titleFit">
+          <template v-for="(word, i) in titleWords" :key="i"><span class="intro__word">{{ word }}</span>{{ ' ' }}</template>
         </h1>
       </div>
 
       <div class="layer" data-depth="0.7">
         <div class="intro__rule" data-part="rule" aria-hidden="true"></div>
-        <p class="intro__subtitle" aria-label="Descend into the unknown">
-          <span data-part="word" aria-hidden="true">DESCEND</span>
-          <span data-part="word" aria-hidden="true">INTO</span>
-          <span data-part="word" aria-hidden="true">THE</span>
-          <span data-part="word" aria-hidden="true">UNKNOWN</span>
+        <p class="intro__subtitle" :aria-label="t('intro.subtitle')">
+          <span v-for="lang in LOCALES" v-show="lang === locale" :key="lang" class="intro__words" data-words>
+            <span v-for="(word, i) in subtitleWords(lang)" :key="i" data-part="word" aria-hidden="true">{{ word }}</span>
+          </span>
         </p>
       </div>
 
       <div class="layer layer--button" data-depth="0.45" data-magnetic>
         <button type="button" class="intro__start" data-part="start" @click="emit('start', 'button')">
           <span class="intro__start-glow" aria-hidden="true"></span>
-          <span class="intro__start-label">START EXPEDITION</span>
+          <span class="intro__start-label">{{ t('intro.start') }}</span>
           <svg class="intro__start-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
         </button>
       </div>
@@ -74,8 +84,8 @@ defineExpose({
     <div class="intro__bar">
       <div class="layer intro__side intro__side--left" data-depth="0.25">
         <dl class="intro__facts">
-          <div data-part="fact"><dt>Expedition</dt><dd>01 · Challenger Deep</dd></div>
-          <div data-part="fact"><dt>Position</dt><dd>11°22′ N · 142°35′ E</dd></div>
+          <div data-part="fact"><dt>{{ t('intro.facts.expedition') }}</dt><dd>{{ t('intro.facts.expeditionValue') }}</dd></div>
+          <div data-part="fact"><dt>{{ t('intro.facts.position') }}</dt><dd>{{ t('intro.facts.positionValue') }}</dd></div>
         </dl>
       </div>
 
@@ -83,8 +93,8 @@ defineExpose({
 
       <div class="layer intro__side intro__side--right" data-depth="0.25">
         <dl class="intro__facts">
-          <div data-part="fact"><dt>Target depth</dt><dd>≈ 11,000 m</dd></div>
-          <div data-part="fact"><dt>Conditions</dt><dd>Calm seas · Golden hour</dd></div>
+          <div data-part="fact"><dt>{{ t('intro.facts.targetDepth') }}</dt><dd>{{ t('intro.facts.targetDepthValue') }}</dd></div>
+          <div data-part="fact"><dt>{{ t('intro.facts.conditions') }}</dt><dd>{{ appState.mode === 'night' ? t('intro.facts.conditionsValueNight') : t('intro.facts.conditionsValue') }}</dd></div>
         </dl>
       </div>
     </div>
@@ -119,10 +129,12 @@ defineExpose({
   margin: 0;
   font-family: var(--font-display);
   font-weight: 400;
-  font-size: clamp(1.9rem, 5vw, 4.2rem);
+  /* Never wider than the screen, whatever the language: about 1em per spaced capital. */
+  font-size: min(clamp(1.9rem, 5vw, 4.2rem), calc((100vw - 4rem) / var(--title-chars, 14)));
   line-height: 1.08;
   letter-spacing: var(--track);
   margin-right: calc(var(--track) * -1); /* trailing letter-spacing would push the text off-centre */
+  text-transform: uppercase;
   text-shadow: 0 2px 36px rgba(2, 12, 22, 0.55);
 }
 .intro__word { display: inline-block; }
@@ -141,8 +153,10 @@ defineExpose({
   margin-right: -0.42em;
   color: rgba(215, 241, 242, 0.86);
   text-shadow: 0 1px 18px rgba(2, 12, 22, 0.6);
+  text-transform: uppercase;
 }
-.intro__subtitle span { display: inline-block; margin: 0 0.35em; }
+.intro__words { display: inline; }
+.intro__subtitle [data-part='word'] { display: inline-block; margin: 0 0.35em; }
 
 .layer--button { margin-top: 2.4rem; }
 
@@ -213,7 +227,7 @@ defineExpose({
 
 /* Phones in portrait: details tuck under the button in two compact columns, the cue sits above them. */
 @media (max-width: 640px) {
-  .intro__title { font-size: clamp(1.9rem, 9.4vw, 3rem); }
+  .intro__title { font-size: min(clamp(1.9rem, 9.4vw, 3rem), calc((100vw - 3rem) / var(--word-chars, 8))); }
   .intro__word { display: block; }
   .intro__content { padding-bottom: calc(var(--inset-bottom) + 12rem); }
   .intro__start { min-height: 3.25rem; padding: 0 1.7rem 0 1.9rem; font-size: 0.76rem; }
@@ -228,7 +242,7 @@ defineExpose({
 /* Short landscape screens (phones on their side): keep only title, subtitle and button. */
 @media (max-height: 520px) {
   .intro__content { padding-bottom: calc(var(--inset-bottom) + 1.5rem); }
-  .intro__title { font-size: clamp(1.6rem, 7vh, 2.6rem); }
+  .intro__title { font-size: min(clamp(1.6rem, 7vh, 2.6rem), calc((100vw - 4rem) / var(--title-chars, 14))); }
   .intro__word { display: inline-block; }
   .intro__rule { margin: 0.9rem auto 0.8rem; }
   .layer--button { margin-top: 1.2rem; }

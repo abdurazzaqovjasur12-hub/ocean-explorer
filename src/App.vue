@@ -2,14 +2,16 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import gsap from '@/core/gsap';
 import { appState } from '@/state/appState';
-import { QUALITY_LEVELS, QUALITY_ORDER } from '@/config/quality';
+import { QUALITY_ORDER } from '@/config/quality';
 import { CHAPTERS, STORY_LENGTH, chapterIndexById } from '@/config/story';
+import { t } from '@/i18n';
 import { prefersReducedMotion } from '@/utils/motion';
 import { createOceanScene } from '@/scenes/ocean/index.js';
 import { createArrivalTimeline } from '@/core/expedition';
 import { useFullscreen } from '@/composables/useFullscreen';
 import { useAudio } from '@/composables/useAudio';
 import { useStoryScroll } from '@/composables/useStoryScroll';
+import { useDayNight } from '@/composables/useDayNight';
 import ThreeScene from '@/components/ThreeScene.vue';
 import LoadingScreen from '@/components/LoadingScreen.vue';
 import IntroScreen from '@/components/IntroScreen.vue';
@@ -34,6 +36,7 @@ let arrival = null;
 const { supported: fullscreenSupported, isFullscreen, toggle: toggleFullscreen } = useFullscreen();
 const { toggle: toggleSound, setVolume, cue } = useAudio();
 const story = useStoryScroll();
+const { toggle: toggleMode } = useDayNight();
 
 const chapter = computed(() => CHAPTERS[appState.story.chapter]);
 const chapterNumber = computed(() => String(appState.story.chapter + 1).padStart(2, '0'));
@@ -46,7 +49,7 @@ function onProgress(value, label) {
 }
 function onReady() {
   appState.loading.progress = 1;
-  appState.loading.label = 'Ready';
+  appState.loading.label = 'loading.ready';
   appState.loading.ready = true;
 }
 function onError(message) {
@@ -171,10 +174,10 @@ onBeforeUnmount(() => {
 
     <div class="ui">
       <div class="brand" data-hud>
-        <span class="brand__name">Ocean Explorer</span>
+        <span class="brand__name">{{ t('app.name') }}</span>
         <span class="brand__chapter" aria-live="polite">
           <Transition name="label" mode="out-in">
-            <span :key="chapter.id"><small>{{ chapterNumber }}</small> {{ chapter.label }}</span>
+            <span :key="chapter.id"><small>{{ chapterNumber }}</small> {{ t(`chapters.${chapter.id}.label`) }}</span>
           </Transition>
         </span>
       </div>
@@ -185,11 +188,13 @@ onBeforeUnmount(() => {
         :sound-on="appState.soundOn"
         :sound-error="appState.audio.error"
         :volume="appState.audio.volume"
-        :quality-label="QUALITY_LEVELS[appState.quality].label"
+        :quality="appState.quality"
+        :mode="appState.mode"
         @toggle-fullscreen="toggleFullscreen"
         @toggle-sound="toggleSound"
         @set-volume="setVolume"
         @cycle-quality="cycleQuality"
+        @toggle-mode="toggleMode"
       />
       <DepthIndicator ref="gauge" class="gauge" :depth="appState.meters" />
       <StoryOverlay ref="overlay" />
@@ -234,6 +239,16 @@ onBeforeUnmount(() => {
   pointer-events: none;
   background: radial-gradient(120% 95% at 50% 42%, transparent 58%, rgba(2, 8, 14, 0.42) 100%);
 }
+/* At night the edges close in a little more, easing in with the scene. */
+.vignette::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(115% 90% at 50% 42%, transparent 50%, rgba(1, 4, 10, 0.38) 100%);
+  opacity: 0;
+  transition: opacity 2.6s ease-in-out;
+}
+:global(html[data-mode='night']) .vignette::after { opacity: 1; }
 .flash {
   position: absolute;
   inset: 0;
@@ -286,12 +301,16 @@ onBeforeUnmount(() => {
 }
 /* Narrow phones: the chapter name wraps rather than running under the buttons on the right. */
 @media (max-width: 440px) {
-  .brand__name { font-size: 0.95rem; }
-  .brand__chapter { max-width: 9.5rem; line-height: 1.5; }
+  /* the name may wrap onto two lines (Uzbek and Russian names are long) rather than run under the buttons */
+  .brand__name { font-size: 0.95rem; max-width: calc(100vw - 17.8rem); line-height: 1.2; }
+  .brand__chapter { max-width: calc(100vw - 17.8rem); line-height: 1.5; } /* both stop short of the HUD row */
+}
+@media (max-width: 400px) {
+  .brand__name, .brand__chapter { max-width: calc(100vw - 15.2rem); } /* one HUD button fewer here (no fullscreen) */
 }
 @media (max-width: 360px) {
   .brand { left: calc(var(--inset-left) + 0.9rem); }
-  .brand__name { font-size: 0.86rem; }
-  .brand__chapter { max-width: 7.5rem; font-size: 0.58rem; }
+  .brand__name { font-size: 0.86rem; max-width: calc(100vw - 13.5rem); }
+  .brand__chapter { max-width: calc(100vw - 13.5rem); font-size: 0.58rem; letter-spacing: 0.1em; }
 }
 </style>

@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { QUALITY_LEVELS } from '@/config/quality';
 import { createRng } from '@/utils/random';
 import { smoothstep } from '@/utils/math';
+import { nightAt } from './depthPalette';
 
 const MAX = QUALITY_LEVELS.high.story.glow;
 const BOX = new THREE.Vector3(44, 36, 56); // the volume of water around the camera the sparks live in
@@ -124,7 +125,8 @@ export function createBioluminescence(count) {
     setCount,
     /** meters: camera depth; speed: how fast the camera is moving (scene units / s). */
     update(t, meters, camPos, viewportHeight, speed, under) {
-      const intensity = glowAt(meters) * under;
+      // At night the plankton just under the surface lights up as well (sea sparkle), not only the deep.
+      const intensity = Math.max(glowAt(meters), nightAt(meters) * 0.6 * smoothstep(3, 40, meters)) * under;
       points.visible = intensity > 0.005;
       if (!points.visible) return;
       uniforms.uTime.value = t;

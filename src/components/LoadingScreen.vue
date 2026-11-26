@@ -2,12 +2,13 @@
 import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue';
 import gsap from '@/core/gsap';
 import { motionDuration } from '@/utils/motion';
+import { t } from '@/i18n';
 
 const props = defineProps({
   progress: { type: Number, default: 0 }, // 0..1
-  label: { type: String, default: '' },
+  label: { type: String, default: '' }, // a translation key (loading.*)
   ready: Boolean,
-  error: { type: String, default: null },
+  error: { type: String, default: null }, // a translation key (loading.error*)
 });
 // 'leaving': the fade-out starts (the scene can begin underneath it); 'hidden': it is gone.
 const emit = defineEmits(['leaving', 'hidden']);
@@ -46,20 +47,20 @@ onBeforeUnmount(() => {
     ref="root"
     class="loader"
     role="progressbar"
-    aria-label="Loading Ocean Explorer"
+    :aria-label="t('loading.aria')"
     aria-valuemin="0"
     aria-valuemax="100"
     :aria-valuenow="percent"
   >
     <div v-if="error" class="loader__error">
-      <h2>Can’t start the dive</h2>
-      <p>{{ error }}</p>
+      <h2>{{ t('loading.errorTitle') }}</h2>
+      <p>{{ t(error) }}</p>
     </div>
     <template v-else>
       <p class="loader__percent">
         <span class="loader__num">{{ percent }}</span><span class="loader__sign">%</span>
       </p>
-      <p class="loader__label">{{ label }}</p>
+      <p class="loader__label">{{ label ? t(label) : '' }}</p>
       <div class="loader__bar"><span class="loader__fill" :style="{ transform: `scaleX(${display.value})` }"></span></div>
     </template>
   </div>

@@ -1,33 +1,35 @@
 <script setup>
 import { computed } from 'vue';
 import { MAX_DEPTH, ZONES, gaugePosition, zoneAt } from '@/config/zones';
+import { formatNumber, t } from '@/i18n';
 
 const props = defineProps({ depth: { type: Number, default: 0 } });
 
 const position = computed(() => gaugePosition(props.depth));
 const zone = computed(() => zoneAt(props.depth));
-const metres = computed(() => Math.round(props.depth).toLocaleString('en-US'));
+const metres = computed(() => formatNumber(Math.round(props.depth))); // 10,900 / 10 900, as the language writes it
+const zoneName = computed(() => t(`zones.${zone.value.id}`));
 // A tick at the start of every zone after the first marks where the water changes character.
 const ticks = ZONES.slice(1).map((z, i) => ({ id: z.id, top: ((i + 1) / ZONES.length) * 100 }));
 </script>
 
 <template>
-  <aside class="depth" :style="{ '--pos': position }" aria-label="Depth gauge" data-ui>
+  <aside class="depth" :style="{ '--pos': position }" :aria-label="t('depth.aria')" data-ui>
     <div
       class="depth__track"
       role="meter"
       aria-valuemin="0"
       :aria-valuemax="MAX_DEPTH"
       :aria-valuenow="Math.round(depth)"
-      :aria-valuetext="`${metres} metres, ${zone.name}`"
+      :aria-valuetext="t('depth.valueText', { depth: metres, zone: zoneName })"
     >
       <span class="depth__fill"></span>
-      <span v-for="t in ticks" :key="t.id" class="depth__tick" :style="{ top: t.top + '%' }"></span>
+      <span v-for="tick in ticks" :key="tick.id" class="depth__tick" :style="{ top: tick.top + '%' }"></span>
       <div class="depth__marker">
         <span class="depth__dot"></span>
         <div class="depth__readout">
-          <span class="depth__value">{{ metres }}<small> m</small></span>
-          <span class="depth__zone">{{ zone.name }}</span>
+          <span class="depth__value">{{ metres }}<small>{{ ' ' + t('depth.unit') }}</small></span>
+          <span class="depth__zone">{{ zoneName }}</span>
         </div>
       </div>
     </div>

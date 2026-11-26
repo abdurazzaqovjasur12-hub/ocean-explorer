@@ -2,6 +2,7 @@
 import { onBeforeUnmount, onMounted, ref } from 'vue';
 import gsap from '@/core/gsap';
 import { buildScrollCue } from '@/core/introTimelines';
+import { t } from '@/i18n';
 
 defineEmits(['activate']);
 
@@ -17,9 +18,9 @@ onBeforeUnmount(() => ctx?.revert());
 </script>
 
 <template>
-  <button ref="root" type="button" class="scroll" aria-label="Begin the expedition" @click="$emit('activate')">
-    <span class="scroll__label scroll__label--mouse">SCROLL</span>
-    <span class="scroll__label scroll__label--touch">SWIPE UP</span>
+  <button ref="root" type="button" class="scroll" :aria-label="t('scroll.aria')" @click="$emit('activate')">
+    <span class="scroll__label scroll__label--mouse">{{ t('scroll.mouse') }}</span>
+    <span class="scroll__label scroll__label--touch">{{ t('scroll.touch') }}</span>
     <span class="scroll__track" aria-hidden="true"><span class="scroll__dot" data-dot></span></span>
     <svg class="scroll__chevron" data-chevron viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
   </button>
@@ -38,7 +39,7 @@ onBeforeUnmount(() => ctx?.revert());
   color: var(--mist);
   pointer-events: auto;
 }
-.scroll__label { font-size: 0.64rem; letter-spacing: 0.34em; margin-right: -0.34em; }
+.scroll__label { font-size: 0.64rem; letter-spacing: 0.34em; margin-right: -0.34em; text-transform: uppercase; white-space: nowrap; }
 .scroll__label--touch { display: none; }
 @media (pointer: coarse) {
   .scroll__label--mouse { display: none; }

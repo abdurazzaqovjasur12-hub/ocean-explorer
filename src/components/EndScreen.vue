@@ -1,31 +1,38 @@
 <script setup>
+import { computed } from 'vue';
+import { LOCALES, locale, t, tFor } from '@/i18n';
+
 defineEmits(['replay', 'explore']);
 
-const TITLE = 'THE OCEAN IS STILL UNEXPLORED';
-// One span per letter (inside one per word, so lines only break between words): the story timeline
-// brings them in one by one as the scroll reaches the end.
-const words = TITLE.split(' ').map((w) => w.split(''));
+// One span per letter (inside one per word, so lines only break between words): the story timeline brings
+// them in one by one as the scroll reaches the end. Each language keeps its own set of letters, all animated
+// together, and only the current one is shown: switching language never leaves letters out of the animation.
+const titleWords = (lang) => tFor(lang, 'end.title').split(' ').map((w) => Array.from(w));
+// Long words (Uzbek, Russian) scale the title down on narrow screens rather than overflow.
+const titleFit = computed(() => ({ '--word-chars': Math.max(...titleWords(locale.value).map((w) => w.length)) }));
 </script>
 
 <template>
   <section class="end" data-end aria-labelledby="end-title">
     <div class="end__scrim" data-end-scrim aria-hidden="true"></div>
     <div class="end__content">
-      <p class="end__kicker" data-end-part>Expedition complete · 10,900 m and back</p>
-      <h2 id="end-title" class="end__title" :aria-label="TITLE">
-        <span v-for="(word, w) in words" :key="w" class="end__word" aria-hidden="true">
-          <span v-for="(ch, c) in word" :key="c" class="end__char" data-end-char>{{ ch }}</span>
+      <p class="end__kicker" data-end-part>{{ t('end.kicker') }}</p>
+      <h2 id="end-title" class="end__title" :aria-label="t('end.title')" :style="titleFit">
+        <span v-for="lang in LOCALES" v-show="lang === locale" :key="lang" class="end__lang" data-end-lang aria-hidden="true">
+          <span v-for="(word, w) in titleWords(lang)" :key="w" class="end__word">
+            <span v-for="(ch, c) in word" :key="c" class="end__char" data-end-char>{{ ch }}</span>
+          </span>
         </span>
       </h2>
       <div class="end__rule" data-end-rule aria-hidden="true"></div>
-      <p class="end__note" data-end-part>More than eighty percent of the ocean has never been mapped, observed or explored.</p>
+      <p class="end__note" data-end-part>{{ t('end.note') }}</p>
       <div class="end__actions" data-end-part>
         <button type="button" class="end__btn end__btn--primary" data-ui @click="$emit('replay')">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.4-5.7M4 4v4.5h4.5" /></svg>
-          <span>REPLAY EXPEDITION</span>
+          <span>{{ t('end.replay') }}</span>
         </button>
         <button type="button" class="end__btn" data-ui @click="$emit('explore')">
-          <span>EXPLORE AGAIN</span>
+          <span>{{ t('end.explore') }}</span>
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M6 13l6 6 6-6" /></svg>
         </button>
       </div>
@@ -78,8 +85,10 @@ const words = TITLE.split(' ').map((w) => w.split(''));
   letter-spacing: var(--track);
   margin-right: calc(var(--track) * -1);
   color: #f4fbfc;
+  text-transform: uppercase;
   text-shadow: 0 2px 36px rgba(2, 12, 22, 0.6);
 }
+.end__lang { display: inline; }
 .end__word { display: inline-block; white-space: nowrap; margin: 0 0.22em; }
 .end__char { display: inline-block; }
 .end__rule {
@@ -118,6 +127,7 @@ const words = TITLE.split(' ').map((w) => w.split(''));
   color: #f4fbfc;
   font-size: 0.76rem;
   letter-spacing: 0.24em;
+  text-transform: uppercase;
   pointer-events: auto;
   touch-action: manipulation; /* no double-tap zoom delay on phones */
   transition: border-color 0.3s, background-color 0.3s;
@@ -133,7 +143,7 @@ const words = TITLE.split(' ').map((w) => w.split(''));
 /* Phones: buttons stacked full width, comfortably above the progress bar and the home indicator. */
 @media (max-width: 640px) {
   .end__content { padding: 0 1.1rem calc(var(--inset-bottom) + 4.25rem); }
-  .end__title { font-size: clamp(1.6rem, 8vw, 2.4rem); --track: 0.12em; }
+  .end__title { font-size: min(clamp(1.6rem, 8vw, 2.4rem), calc((100vw - 3rem) / (var(--word-chars, 10) * 0.9))); --track: 0.12em; }
   .end__actions { flex-direction: column; align-self: stretch; width: 100%; max-width: 22rem; margin-inline: auto; }
   .end__btn { width: 100%; min-height: 3.25rem; }
 }

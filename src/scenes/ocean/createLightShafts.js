@@ -1,6 +1,10 @@
 import * as THREE from 'three';
 import { shaftVertex, shaftFragment } from './shaders';
 import { buildShafts } from './shaftData';
+import { nightAt } from './depthPalette';
+
+const SUN = new THREE.Color(1.0, 0.96, 0.88);
+const MOON = new THREE.Color(0.55, 0.68, 1.0);
 
 /**
  * Soft beams of light hanging from the surface, shimmering as the waves move above them.
@@ -11,6 +15,7 @@ export function createLightShafts(scene, atmosphere, settings) {
     uTime: atmosphere.uniforms.uTime,
     uDown: { value: new THREE.Vector3(0, -1, 0) },
     uStrength: { value: 0 },
+    uLightColor: { value: SUN.clone() }, // sunlight by day, cool moonlight at night
   };
   const material = new THREE.ShaderMaterial({
     vertexShader: shaftVertex,
@@ -45,7 +50,9 @@ export function createLightShafts(scene, atmosphere, settings) {
     update({ under, meters, rayDir }) {
       uniforms.uDown.value.copy(rayDir).negate();
       // brightest in the sunlit upper water, still visible a few hundred metres down
-      const strength = under * Math.min(1, 0.25 + 0.9 * Math.exp(-meters / 300));
+      const n = nightAt(meters);
+      const strength = under * Math.min(1, 0.25 + 0.9 * Math.exp(-meters / 300)) * (1 - 0.6 * n);
+      uniforms.uLightColor.value.copy(SUN).lerp(MOON, n);
       uniforms.uStrength.value = strength;
       mesh.visible = strength > 0.01 && meters < 900; // below that the beams have long since ended: skip the draw
     },

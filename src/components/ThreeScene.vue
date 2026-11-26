@@ -4,7 +4,8 @@ import { SceneManager } from '@/core/SceneManager';
 import { AssetLoader } from '@/core/AssetLoader';
 
 const props = defineProps({
-  /** async ({ manager, scene, camera, renderer, settings, state, assets, report }) => { update?, render?, resize?, setQuality?, dispose? } */
+  /** async ({ manager, scene, camera, renderer, settings, state, assets, report }) => { update?, render?, resize?, setQuality?, dispose? }
+   `report(progress, labelKey)`: the label is a translation key (loading.*), so it follows the chosen language. */
   sceneFactory: { type: Function, required: true },
   quality: { type: String, default: 'medium' },
   /** Reactive state the scene reads each frame (depth, device, ...). */
@@ -29,12 +30,12 @@ onMounted(async () => {
     });
   } catch (err) {
     console.error('[ThreeScene] WebGL init failed', err);
-    emit('error', 'Your browser couldn’t start WebGL. Update it or turn on hardware acceleration, then reload.');
+    emit('error', 'loading.errorWebgl');
     return;
   }
 
   try {
-    report(0.05, 'Starting the renderer');
+    report(0.05, 'loading.renderer');
     sceneApi = await props.sceneFactory({
       manager,
       scene: manager.scene,
@@ -53,7 +54,7 @@ onMounted(async () => {
     if (sceneApi?.resize) removeResizer = manager.addResizer(sceneApi.resize);
     if (sceneApi?.render) manager.setRenderFunction(sceneApi.render);
 
-    report(0.95, 'Compiling shaders');
+    report(0.95, 'loading.shaders');
     await manager.compile();
     if (unmounted) return;
     sceneApi?.warm?.(); // e.g. post-processing shaders, compiled now rather than mid-dive
@@ -62,7 +63,7 @@ onMounted(async () => {
     emit('ready', { manager, api: sceneApi });
   } catch (err) {
     console.error('[ThreeScene] scene setup failed', err);
-    if (!unmounted) emit('error', 'Something went wrong while building the scene. Reload to try again.');
+    if (!unmounted) emit('error', 'loading.errorScene');
   }
 });
 

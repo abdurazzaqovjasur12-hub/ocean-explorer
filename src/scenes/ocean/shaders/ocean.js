@@ -114,9 +114,10 @@ void main() {
 
     // Body colour: deep blue, lighter and greener on crests and when looking across the surface.
     float hN = clamp01(w.disp.y / (uWaveAmp * 1.1) * 0.5 + 0.5);
-    vec3 deep    = vec3(0.002, 0.020, 0.062);
-    vec3 shallow = vec3(0.005, 0.088, 0.175);
-    vec3 cyan    = vec3(0.012, 0.260, 0.300);
+    float dayBody = 1.0 - 0.8 * uNight; // the moonlit sea keeps only a trace of its daytime colour
+    vec3 deep    = vec3(0.002, 0.020, 0.062) * dayBody;
+    vec3 shallow = vec3(0.005, 0.088, 0.175) * dayBody;
+    vec3 cyan    = vec3(0.012, 0.260, 0.300) * mix(1.0, 0.2, uNight);
     float tilt = 1.0 - cosV;
     vec3 body = mix(deep, shallow, clamp01(smoothstep(0.25, 1.0, hN) * 0.75 + tilt * 0.35));
     float sss = pow(clamp01(dot(V, -normalize(L + N * 0.4))), 3.0) * smoothstep(0.4, 0.95, hN);
@@ -143,7 +144,7 @@ void main() {
     if (foamMask > 0.002) { // the noise is only worth computing where foam can exist
       float pat = foamPattern(vParam, fp);
       float foam = foamMask * smoothstep(0.46, 0.74, pat + crest * 0.25);
-      vec3 foamCol = vec3(0.70, 0.80, 0.88) * (0.45 + 0.50 * clamp01(dot(N, L) * 0.7 + 0.5));
+      vec3 foamCol = vec3(0.70, 0.80, 0.88) * (0.45 + 0.50 * clamp01(dot(N, L) * 0.7 + 0.5)) * mix(1.0, 0.18, uNight);
       foamCol += uSunColor * 0.12 * clamp01(dot(N, L));
       col = mix(col, foamCol, clamp01(foam) * 0.85);
     }
@@ -172,8 +173,8 @@ void main() {
     // The sky seen through the window has crossed uMeters metres of water: red goes first, then green, blue lasts.
     float slant = 1.0 / max(rd.y, 0.4);
     vec3 absorb = vec3(exp(-uMeters * slant / 30.0), exp(-uMeters * slant / 160.0), exp(-uMeters * slant / 700.0));
-    col = mix(mirror, skyT * (1.0 - Fu) * absorb * 0.8 + waterLin * 0.3, window); // sky through the window, softened by in-scattered water light
-    col += vec3(0.02, 0.22, 0.26) * absorb * window * (1.0 - window) * 3.0; // bright rim at the window edge
+    col = mix(mirror, skyT * (1.0 - Fu) * absorb * 0.8 * mix(1.0, 0.45, uNight) + waterLin * 0.3, window); // sky through the window, softened by in-scattered water light
+    col += vec3(0.02, 0.22, 0.26) * absorb * window * (1.0 - window) * 3.0 * mix(1.0, 0.1, uNight); // bright rim at the window edge (daylight)
     waterMix = 1.0 - exp(-pow(dist * uWaterFog, 2.0));
   }
 

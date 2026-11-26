@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { QUALITY_LEVELS } from '@/config/quality';
 import { metersBelowSurface } from '@/config/zones';
-import { sampleDepthColor, fogDensityAt, absorptionColor, sunlightAt } from './depthPalette';
+import { sampleDepthColor, fogDensityAt, absorptionColor, sunlightAt, setNightLevel } from './depthPalette';
 import { createLights } from './lights';
 import { createEnvironment } from './environment';
 import { createMarineSnow } from './particles';
@@ -16,6 +16,7 @@ import { createBioluminescence } from './bioluminescence';
 import { createWhale } from './whale';
 import { createVents } from './vents';
 import { createAbyss } from './abyss';
+import { createReef } from './reef';
 import { createJellyfish } from './jellyfish';
 import { createBloom, GLOW_LAYER } from './bloom';
 import { smoothstep } from '@/utils/math';
@@ -42,30 +43,34 @@ const CUT_DISTANCE = 6; // scene units in one frame: more than any scrolled trav
  * Bloom (post-processing) is mixed in with depth: none in the sunlit water, full where the living light is.
  */
 export async function createOceanScene({ scene, camera, renderer, settings, state, report }) {
-  report(0.08, 'Filling the water');
+  report(0.08, 'loading.water');
   scene.background = new THREE.Color();
   scene.fog = new THREE.FogExp2(0x2c9fc8, 0.03);
   await pause();
 
-  report(0.18, 'Painting the sky');
+  report(0.18, 'loading.sky');
   const atmosphere = createAtmosphere();
   const sky = createSky(scene, atmosphere, settings);
   await pause();
 
-  report(0.34, 'Raising the swell');
+  report(0.34, 'loading.swell');
   const surface = createOceanSurface(scene, atmosphere, settings);
   await pause();
 
-  report(0.5, 'Letting the light in');
+  report(0.5, 'loading.light');
   const shafts = createLightShafts(scene, atmosphere, settings);
   const lights = createLights(scene);
   await pause();
 
-  report(0.64, 'Shaping the seabed');
+  report(0.64, 'loading.seabed');
   const environment = createEnvironment(scene, settings);
   await pause();
 
-  report(0.78, 'Releasing marine snow');
+  report(0.7, 'loading.reef');
+  const reef = createReef(scene, atmosphere, lights, settings);
+  await pause();
+
+  report(0.78, 'loading.snow');
   const snow = createMarineSnow(settings.particleCount);
   // A wider, finer, slower layer behind the main one: depth for the parallax.
   const plankton = createMarineSnow(Math.round(QUALITY_LEVELS.high.particleCount * MAX_PLANKTON), { scale: 2.2, size: 0.09, speed: 0.5, seed: 19 });
@@ -73,7 +78,7 @@ export async function createOceanScene({ scene, camera, renderer, settings, stat
   scene.add(snow.points, plankton.points);
   await pause();
 
-  report(0.9, 'Gathering bubbles');
+  report(0.9, 'loading.bubbles');
   const bubbleFx = createBubbleMaterial();
   const burst = createBubbles(Math.round(settings.particleCount * 0.12), bubbleFx.material);
   const streams = createBubbleStreams(MAX_STREAMS, bubbleFx.material);
@@ -83,7 +88,7 @@ export async function createOceanScene({ scene, camera, renderer, settings, stat
   scene.add(burst.points, streams.points, ascent.points);
   await pause();
 
-  report(0.93, 'Waking the deep');
+  report(0.93, 'loading.deep');
   const glow = createBioluminescence(settings.story.glow);
   scene.add(glow.points);
   const whale = createWhale(scene, camera, settings);
@@ -93,9 +98,9 @@ export async function createOceanScene({ scene, camera, renderer, settings, stat
   const bloom = createBloom(renderer, scene, camera, settings);
   // Story scenery starts visible so the shader compile after loading includes it (update() hides what is
   // out of range on the first frame): no hitch the first time the dive reaches it.
-  for (const o of [glow.points, whale.mesh, vents.group, jellies.group, abyss.group]) o.visible = true;
+  for (const o of [glow.points, whale.mesh, vents.group, jellies.group, abyss.group, reef.group, ...reef.group.children]) o.visible = true;
   // What glows: rendered once more, alone, into the bloom (see bloom.js).
-  for (const o of [glow.points, ...jellies.group.children, ...whale.glowing, ...vents.glowing, ...abyss.glowing]) o.layers.enable(GLOW_LAYER);
+  for (const o of [glow.points, ...jellies.group.children, ...whale.glowing, ...vents.glowing, ...abyss.glowing, ...reef.glowing]) o.layers.enable(GLOW_LAYER);
   await pause();
 
   const rig = createCameraRig(camera);
@@ -111,7 +116,7 @@ export async function createOceanScene({ scene, camera, renderer, settings, stat
   let speed = 0;
   let bloomAmount = 0;
   // Development only: `__ocean` in the console exposes the scene, camera and layers for inspection.
-  if (import.meta.env?.DEV && typeof window !== 'undefined') window.__ocean = { scene, camera, renderer, state, shafts, snow, plankton, streams, burst, atmosphere, glow, whale, vents, jellies, abyss, bloom };
+  if (import.meta.env?.DEV && typeof window !== 'undefined') window.__ocean = { scene, camera, renderer, state, shafts, snow, plankton, streams, burst, atmosphere, glow, whale, vents, jellies, abyss, reef, bloom };
 
   return {
     update(dt, t) {
@@ -134,6 +139,7 @@ export async function createOceanScene({ scene, camera, renderer, settings, stat
       if (lastY !== null && dt > 0 && !cut) speed += (Math.abs(rig.baseY - lastY) / dt - speed) * Math.min(1, dt * 4);
       lastY = rig.baseY;
 
+      setNightLevel(state.env.night); // day/night, eased by GSAP: read by the palette, lights, beams and particles
       sampleDepthColor(meters, water);
       scene.background.copy(water);
       scene.fog.color.copy(water);
@@ -146,6 +152,7 @@ export async function createOceanScene({ scene, camera, renderer, settings, stat
         waterColor: water,
         fogDensity: scene.fog.density,
         meters,
+        night: state.env.night,
       });
       const u = atmosphere.uniforms;
       const under = u.uUnder.value;
@@ -192,6 +199,8 @@ export async function createOceanScene({ scene, camera, renderer, settings, stat
       vents.update(dt, t, meters, vh);
       abyss.update(dt, t, meters, under, state.fx.abyss, rig.baseY, vh);
       jellies.update(dt, t, meters, under);
+      // The camera's own travel and the pointer stir the water: the plants and glowing threads sway more.
+      reef.update({ t, meters, under, light, absorb, stir: Math.min(1.2, speed * 0.04 + rig.atmosphere.energy * 0.8), viewportHeight: vh });
       bloomAmount = smoothstep(250, 650, meters) * under;
     },
     render() {
@@ -214,6 +223,7 @@ export async function createOceanScene({ scene, camera, renderer, settings, stat
       glow.setCount(next.story.glow);
       vents.setQuality(next);
       abyss.setQuality(next);
+      reef.setQuality(next);
       jellies.setQuality(next);
       whale.setQuality(next);
       bloom.setQuality(next);

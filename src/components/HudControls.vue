@@ -1,5 +1,7 @@
 <script setup>
 import { computed, onBeforeUnmount, ref } from 'vue';
+import { t } from '@/i18n';
+import LanguageSwitcher from './LanguageSwitcher.vue';
 
 const props = defineProps({
   isFullscreen: Boolean,
@@ -7,9 +9,10 @@ const props = defineProps({
   soundOn: Boolean, // sound is really coming out (not just "wanted")
   soundError: { type: String, default: null },
   volume: { type: Number, default: 0.7 }, // 0..1
-  qualityLabel: { type: String, default: '' },
+  quality: { type: String, default: 'medium' }, // tier id; its name comes from the translations
+  mode: { type: String, default: 'day' }, // 'day' | 'night'
 });
-const emit = defineEmits(['toggle-fullscreen', 'toggle-sound', 'cycle-quality', 'set-volume']);
+const emit = defineEmits(['toggle-fullscreen', 'toggle-sound', 'cycle-quality', 'set-volume', 'toggle-mode']);
 
 // The volume panel: opens when sound is switched on, from its own button, on hover (mouse) or focus,
 // and closes itself after a few idle seconds so it never sits over the picture.
@@ -40,9 +43,12 @@ const onEnter = (e) => { if (e.pointerType === 'mouse' && props.soundOn) openPan
 const onLeave = (e) => { if (e.pointerType === 'mouse' && panelOpen.value) openPanel(1200); };
 
 const volumePct = computed(() => Math.round(props.volume * 100));
+const qualityLabel = computed(() => t(`hud.quality.${props.quality}`));
+const modeLabel = computed(() => (props.mode === 'night' ? t('hud.mode.toDay') : t('hud.mode.toNight')));
+// The browser's own error text (often in another language) goes to the console, not into the label.
 const soundLabel = computed(() => {
-  if (props.soundError) return `Sound unavailable: ${props.soundError}`;
-  return props.soundOn ? 'Turn sound off' : 'Turn sound on';
+  if (props.soundError) return t('hud.sound.unavailable');
+  return props.soundOn ? t('hud.sound.off') : t('hud.sound.on');
 });
 onBeforeUnmount(clearHide);
 </script>
@@ -52,16 +58,16 @@ onBeforeUnmount(clearHide);
     <button
       type="button"
       class="hud__btn hud__btn--text"
-      :aria-label="`Graphics quality: ${qualityLabel}. Press to change`"
+      :aria-label="t('hud.quality.aria', { tier: qualityLabel })"
       @click="$emit('cycle-quality')"
     >{{ qualityLabel }}</button>
 
     <button
       v-if="fullscreenSupported"
       type="button"
-      class="hud__btn"
+      class="hud__btn hud__btn--fullscreen"
       :aria-pressed="isFullscreen"
-      :aria-label="isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'"
+      :aria-label="isFullscreen ? t('hud.fullscreen.exit') : t('hud.fullscreen.enter')"
       @click="$emit('toggle-fullscreen')"
     >
       <svg v-if="!isFullscreen" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" /></svg>
@@ -88,30 +94,46 @@ onBeforeUnmount(clearHide);
     <button
       v-if="soundOn && !soundError"
       type="button"
-      class="hud__btn"
+      class="hud__btn hud__btn--volume"
       :class="{ 'is-open': panelOpen }"
       :aria-expanded="panelOpen"
       aria-controls="hud-volume"
-      aria-label="Volume"
+      :aria-label="t('hud.volume')"
       @click="panelOpen ? closePanel() : openPanel()"
     >
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 8h14M5 16h14" /><circle cx="9" cy="8" r="2" /><circle cx="15" cy="16" r="2" /></svg>
     </button>
 
-    <div v-show="panelOpen && soundOn && !soundError" id="hud-volume" class="hud__volume" role="group" aria-label="Volume">
+    <div v-show="panelOpen && soundOn && !soundError" id="hud-volume" class="hud__volume" role="group" :aria-label="t('hud.volume')">
       <input
         class="hud__range"
         type="range"
         min="0"
         max="100"
         step="1"
-        aria-label="Volume"
+        :aria-label="t('hud.volume')"
         :value="volumePct"
         :style="{ '--fill': volumePct + '%' }"
         @input="onVolume"
       />
       <output class="hud__pct">{{ volumePct }}%</output>
     </div>
+
+    <!-- Day / night: shows the mode you are in (sun or moon); the icons cross-fade as it switches. -->
+    <button
+      type="button"
+      class="hud__btn hud__btn--mode"
+      :class="{ 'is-night': mode === 'night' }"
+      :aria-pressed="mode === 'night'"
+      :aria-label="modeLabel"
+      :title="modeLabel"
+      @click="$emit('toggle-mode')"
+    >
+      <svg class="hud__sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4" /><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6" /></svg>
+      <svg class="hud__moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M19.5 14.6A7.8 7.8 0 0 1 9.4 4.5a7.8 7.8 0 1 0 10.1 10.1z" /><path class="hud__star" d="M17.2 3.6l.5 1.3 1.3.5-1.3.5-.5 1.3-.5-1.3-1.3-.5 1.3-.5z" /></svg>
+    </button>
+
+    <LanguageSwitcher />
   </div>
 </template>
 
@@ -196,13 +218,29 @@ onBeforeUnmount(clearHide);
 @media (max-width: 640px) {
   .hud__range { width: min(8.5rem, 38vw); }
 }
-/* Narrow phones: with sound on there are four buttons; keep them clear of the brand on the left. */
+/* Day / night icon: the sun turns away as the moon comes in. */
+.hud__btn--mode { position: relative; }
+.hud__btn--mode svg { position: absolute; inset: 0; margin: auto; transition: opacity 0.6s, transform 0.6s; }
+.hud__moon { opacity: 0; transform: rotate(-40deg) scale(0.7); }
+.hud__btn--mode.is-night .hud__sun { opacity: 0; transform: rotate(60deg) scale(0.7); }
+.hud__btn--mode.is-night .hud__moon { opacity: 1; transform: none; }
+.hud__btn--mode.is-night { border-color: rgba(183, 162, 255, 0.55); }
+.hud__star { fill: currentColor; stroke: none; }
+
+/* Narrow phones: keep the row clear of the brand on the left. The volume button gives way to the language
+   button; the volume slider still opens whenever sound is switched on. */
 @media (max-width: 440px) {
+  .hud__btn--volume { display: none; }
   .hud { top: calc(var(--inset-top) + 0.85rem); right: calc(var(--inset-right) + 0.75rem); gap: 0.35rem; }
-  .hud__btn { min-width: 2.5rem; height: 2.5rem; }
-  .hud__btn--text { padding: 0 0.7rem; font-size: 0.76rem; }
+  .hud__btn { min-width: 2.35rem; height: 2.35rem; }
+  .hud__btn--text { padding: 0 0.65rem; font-size: 0.74rem; }
 }
-/* The smallest phones (320 px wide): a little tighter still, so four buttons clear the brand. */
+/* Phones up to 400 px: fullscreen gives way to day / night and language (phone browsers hide their own bars
+   while scrolling anyway; iPhones never offer it), so long Uzbek and Russian names still fit beside the row. */
+@media (max-width: 400px) {
+  .hud__btn--fullscreen { display: none; }
+}
+/* The smallest phones (320 px wide): a little tighter still. */
 @media (max-width: 360px) {
   .hud { gap: 0.3rem; right: calc(var(--inset-right) + 0.6rem); }
   .hud__btn { min-width: 2.3rem; height: 2.3rem; }

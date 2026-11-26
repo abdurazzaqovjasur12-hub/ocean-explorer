@@ -130,13 +130,16 @@ export function createStoryTimeline({ state, intro, gauge, beats, end: endScreen
 
     if (endScreen) {
       const at0 = s + 1.18;
-      const chars = endScreen.querySelectorAll('[data-end-char]');
       const parts = endScreen.querySelectorAll('[data-end-part]');
       const [kicker, ...rest] = parts;
       tl.set(endScreen, { autoAlpha: 1 }, at0);
       tl.fromTo(endScreen.querySelector('[data-end-scrim]'), { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.2, ease: 'power1.out', immediateRender: false }, at0);
       tl.fromTo(kicker, { autoAlpha: 0, y: 12 }, { autoAlpha: 1, y: 0, duration: 0.1, ease: 'power2.out', immediateRender: false }, at0);
-      tl.fromTo(chars, { autoAlpha: 0, y: 22 }, { autoAlpha: 1, y: 0, duration: 0.08, stagger: 0.006, ease: 'power2.out', immediateRender: false }, at0 + 0.05);
+      // One set of letters per language (only the current one is shown); every set animates on the same beat.
+      endScreen.querySelectorAll('[data-end-lang]').forEach((set) => {
+        const chars = set.querySelectorAll('[data-end-char]');
+        tl.fromTo(chars, { autoAlpha: 0, y: 22 }, { autoAlpha: 1, y: 0, duration: 0.08, stagger: Math.min(0.006, 0.16 / chars.length), ease: 'power2.out', immediateRender: false }, at0 + 0.05);
+      });
       tl.fromTo(endScreen.querySelector('[data-end-rule]'), { autoAlpha: 0, scaleX: 0 }, { autoAlpha: 1, scaleX: 1, duration: 0.12, ease: 'power2.inOut', immediateRender: false }, at0 + 0.2);
       tl.fromTo(rest, { autoAlpha: 0, y: 16 }, { autoAlpha: 1, y: 0, duration: 0.12, stagger: 0.04, ease: 'power2.out', immediateRender: false }, at0 + 0.24);
       if (at0 + 0.4 > end) throw new Error('end screen runs past the story'); // keep timeline time == screens scrolled

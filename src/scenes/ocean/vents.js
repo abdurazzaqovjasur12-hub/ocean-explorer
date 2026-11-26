@@ -4,6 +4,7 @@ import { QUALITY_LEVELS } from '@/config/quality';
 import { depthToY } from '@/config/zones';
 import { createRng } from '@/utils/random';
 import { smoothstep } from '@/utils/math';
+import { fbm } from '@/utils/noise';
 import { createSprite } from './particles';
 
 /*
@@ -40,38 +41,6 @@ const N = VENTS.length;
 const MAX = QUALITY_LEVELS.high.story.vents;
 // The field stops short of the camera path, so the camera never passes through it on the way down.
 const FIELD = { width: 96, near: -4, far: -74 };
-
-// ---------------------------------------------------------------------------------------------------------
-// Noise on the CPU (for geometry), the same family as the GPU's
-
-function hash2(x, y) {
-  const h = Math.sin(x * 127.1 + y * 311.7) * 43758.5453;
-  return h - Math.floor(h);
-}
-function vnoise(x, y) {
-  const ix = Math.floor(x);
-  const iy = Math.floor(y);
-  const fx = x - ix;
-  const fy = y - iy;
-  const ux = fx * fx * (3 - 2 * fx);
-  const uy = fy * fy * (3 - 2 * fy);
-  const a = hash2(ix, iy);
-  const b = hash2(ix + 1, iy);
-  const c = hash2(ix, iy + 1);
-  const d = hash2(ix + 1, iy + 1);
-  return a + (b - a) * ux + (c - a) * uy + (a - b - c + d) * ux * uy;
-}
-function fbm(x, y, octaves = 4) {
-  let sum = 0;
-  let amp = 0.5;
-  for (let i = 0; i < octaves; i++) {
-    sum += amp * vnoise(x, y);
-    x = x * 2.03 + 17.1;
-    y = y * 2.03 - 9.3;
-    amp *= 0.5;
-  }
-  return sum;
-}
 
 /** A ridge running across the view: a rough, blocky crest that falls away steeply towards the camera and beyond. */
 function floorHeight(x, z) {

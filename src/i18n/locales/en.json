@@ -1,0 +1,152 @@
+{
+  "meta": {
+    "title": "Ocean Explorer",
+    "description": "Ocean Explorer: dive from the surface to the deepest trench."
+  },
+  "app": {
+    "name": "Ocean Explorer"
+  },
+  "languages": {
+    "uz": "O‘zbekcha",
+    "en": "English",
+    "ru": "Русский"
+  },
+  "intro": {
+    "subtitle": "Descend into the unknown",
+    "start": "Start expedition",
+    "facts": {
+      "expedition": "Expedition",
+      "expeditionValue": "01 · Challenger Deep",
+      "position": "Position",
+      "positionValue": "11°22′ N · 142°35′ E",
+      "targetDepth": "Target depth",
+      "targetDepthValue": "≈ 11,000 m",
+      "conditions": "Conditions",
+      "conditionsValue": "Calm seas · Golden hour",
+      "conditionsValueNight": "Calm seas · Moonlit night"
+    }
+  },
+  "scroll": {
+    "mouse": "Scroll",
+    "touch": "Swipe up",
+    "aria": "Begin the expedition"
+  },
+  "loading": {
+    "aria": "Loading Ocean Explorer",
+    "preparing": "Preparing the dive",
+    "renderer": "Starting the renderer",
+    "water": "Filling the water",
+    "sky": "Painting the sky",
+    "swell": "Raising the swell",
+    "light": "Letting the light in",
+    "seabed": "Shaping the seabed",
+    "reef": "Growing the reef",
+    "snow": "Releasing marine snow",
+    "bubbles": "Gathering bubbles",
+    "deep": "Waking the deep",
+    "shaders": "Compiling shaders",
+    "ready": "Ready",
+    "errorTitle": "Can’t start the dive",
+    "errorWebgl": "Your browser couldn’t start WebGL. Update it or turn on hardware acceleration, then reload.",
+    "errorScene": "Something went wrong while building the scene. Reload to try again."
+  },
+  "hud": {
+    "quality": {
+      "low": "Low",
+      "medium": "Medium",
+      "high": "High",
+      "aria": "Graphics quality: {tier}. Press to change"
+    },
+    "fullscreen": {
+      "enter": "Enter fullscreen",
+      "exit": "Exit fullscreen"
+    },
+    "sound": {
+      "on": "Turn sound on",
+      "off": "Turn sound off",
+      "unavailable": "Sound unavailable"
+    },
+    "volume": "Volume",
+    "language": {
+      "button": "Language: {name}. Choose a language",
+      "menu": "Choose a language"
+    },
+    "mode": {
+      "toNight": "Switch to night mode",
+      "toDay": "Switch to day mode"
+    }
+  },
+  "depth": {
+    "aria": "Depth gauge",
+    "unit": "m",
+    "valueText": "{depth} metres, {zone}"
+  },
+  "zones": {
+    "sunlight": "Sunlight zone",
+    "twilight": "Twilight zone",
+    "midnight": "Midnight zone",
+    "abyssal": "Abyssal zone",
+    "hadal": "Hadal zone"
+  },
+  "progress": {
+    "aria": "Expedition chapters",
+    "bar": "Expedition progress",
+    "chapter": "Chapter {n}: {label}"
+  },
+  "chapters": {
+    "surface": {
+      "label": "Ocean surface"
+    },
+    "descent": {
+      "label": "The descent",
+      "kicker": "0 – 150 m",
+      "title": "Breaking the surface",
+      "text": "The sky folds into a ripple of light overhead. With every metre, the sea takes a little more of the sun.",
+      "textNight": "The night sky folds into a ripple of silver overhead. Below you, the water is already dark."
+    },
+    "shallows": {
+      "label": "Shallow water",
+      "kicker": "Sunlight zone · 300 m",
+      "title": "Cathedral light",
+      "text": "Shafts of sun lean through the blue. Red light is long gone; below 200 metres only blue still reaches you.",
+      "textNight": "Faint moonbeams lean through the dark blue. Here and there, plankton sparks as you pass."
+    },
+    "glow": {
+      "label": "Bioluminescence",
+      "kicker": "Twilight zone · 900 m",
+      "title": "Living light",
+      "text": "Out of the dark, jellyfish pulse with their own light. Most animals down here make it: to hunt, to hide, to find each other."
+    },
+    "whale": {
+      "label": "Whale encounter",
+      "kicker": "Midnight zone · 1,800 m",
+      "title": "A passing giant",
+      "text": "A sperm whale hunts in total darkness, finding squid by sound alone. One breath at the surface lasts it over an hour."
+    },
+    "vents": {
+      "label": "Hydrothermal vents",
+      "kicker": "Mid-ocean ridge · 3,000 m",
+      "title": "Black smokers",
+      "text": "Water hotter than 350 °C pours out of the seafloor, thick with minerals. Life thrives here without any sunlight at all."
+    },
+    "abyss": {
+      "label": "The abyss",
+      "kicker": "Challenger Deep · 10,900 m",
+      "title": "The abyss",
+      "text": "The deepest water on Earth, under more than a thousand times the pressure of the air above. Something vast moves at the edge of the light, and is gone."
+    },
+    "return": {
+      "label": "Return to surface",
+      "kicker": "The ascent",
+      "title": "Back into the light",
+      "text": "Eleven kilometres of water above you, and every metre a little brighter than the last."
+    }
+  },
+  "end": {
+    "kicker": "Expedition complete · 10,900 m and back",
+    "title": "The ocean is still unexplored",
+    "note": "More than eighty percent of the ocean has never been mapped, observed or explored.",
+    "replay": "Replay expedition",
+    "explore": "Explore again"
+  }
+}
